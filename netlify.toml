@@ -1,14 +1,13 @@
-﻿[build]
-  publish = "public"
-  command = "echo 'Build complete'"
+[build]
+publish = "public"
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+from = "/*"
+to = "/index.html"
+status = 200
 
 [[headers]]
-  for = "/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    X-Frame-Options = "ALLOWALL"  
+for = "/*"
+[headers.values]
+Access-Control-Allow-Origin = "*"
+X-Frame-Options = "ALLOWALL"
