@@ -167,7 +167,51 @@ function initializeTestMode() {
         }, 500);
     }, 1000);
 }
+// Добавьте в app.js:
+const teaCatalog = [
+    {
+        id: 1,
+        name: 'Зеленый чай Лунцзин',
+        description: 'Элитный зеленый чай с нежным ароматом',
+        price: 800,
+        category: 'green',
+        weight: '50г',
+        tags: ['Хит', 'Популярное'],
+        image: 'green-tea.jpg'
+    },
+    // ... остальные товары
+];
 
+function showProductDetails(productId) {
+    const product = teaCatalog.find(p => p.id === productId);
+    const modal = document.getElementById('product-modal');
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${product.name}</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="product-detail-image" style="background: #4CAF50; height: 200px; border-radius: 10px; margin-bottom: 15px;"></div>
+                <p>${product.description}</p>
+                <p><strong>Вес:</strong> ${product.weight}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <div class="product-price">${product.price}₽</div>
+                    <div>
+                        <button onclick="updateQuantity(${product.id}, -1)" style="padding: 8px 15px; background: #f0f0f0; border: none; border-radius: 5px; cursor: pointer;">-</button>
+                        <span style="margin: 0 10px;" id="quantity-${product.id}">1</span>
+                        <button onclick="updateQuantity(${product.id}, 1)" style="padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">+</button>
+                    </div>
+                </div>
+                <button onclick="addToCart(${product.id})" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    Добавить в корзину
+                </button>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
 // Сохраняем пользователя в localStorage
 function saveUserToStorage(user) {
     const userStorage = {
