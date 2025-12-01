@@ -3,8 +3,22 @@ let tg = window.Telegram.WebApp;
 let cart = [];
 let userData = null;
 
+// Функция для отладки
+function debugLog(message, data = null) {
+    console.log(`[DEBUG] ${message}`, data || '');
+}
+
 // Инициализация приложения
 function initApp() {
+    debugLog('=== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===');
+    
+    // Проверяем, что мы в Telegram Web App
+    if (!window.Telegram || !window.Telegram.WebApp) {
+        debugLog('Не в Telegram Web App. Запускаем в тестовом режиме.');
+        initializeTestMode();
+        return;
+    }
+    
     // Инициализируем Telegram Web App
     tg.ready();
     tg.expand();
@@ -15,35 +29,11 @@ function initApp() {
     
     // Получаем данные пользователя из Telegram
     const initData = tg.initDataUnsafe;
-    console.log('Telegram initData:', initData); // Для отладки
+    debugLog('Telegram initData:', initData);
     
-    // Проверяем наличие данных пользователя
-    if (initData && initData.user) {
-        // Данные из Telegram
-        userData = {
-            id: initData.user.id,
-            first_name: initData.user.first_name || 'Гость',
-            last_name: initData.user.last_name || '',
-            username: initData.user.username || '',
-            language_code: initData.user.language_code || 'ru',
-            is_premium: initData.user.is_premium || false,
-            photo_url: initData.user.photo_url || null
-        };
-    } else {
-        // Если данных нет, используем сохраненные или гостевой режим
-        const savedUser = loadUserFromStorage();
-        if (savedUser) {
-            userData = savedUser;
-        } else {
-            userData = {
-                id: 'guest_' + Date.now(),
-                first_name: 'Гость',
-                last_name: '',
-                username: '',
-                photo_url: null
-            };
-        }
-    }
+    // Проверяем разные способы получения данных
+    userData = getUserDataFromTelegram(initData);
+    debugLog('Данные пользователя:', userData);
     
     // Сохраняем пользователя в localStorage
     saveUserToStorage(userData);
@@ -64,13 +54,115 @@ function initApp() {
     }, 1000);
 }
 
+// Получение данных пользователя из Telegram
+function getUserDataFromTelegram(initData) {
+    let user = null;
+    
+    // Способ 1: initDataUnsafe.user (основной)
+    if (initData && initData.user) {
+        user = {
+            id: initData.user.id,
+            first_name: initData.user.first_name || 'Гость',
+            last_name: initData.user.last_name || '',
+            username: initData.user.username || '',
+            language_code: initData.user.language_code || 'ru',
+            is_premium: initData.user.is_premium || false,
+            photo_url: initData.user.photo_url || null,
+            source: 'telegram_user'
+        };
+        debugLog('Данные получены через initData.user');
+    }
+    
+    // Способ 2: query_id (если есть доступ)
+    if (!user && initData && initData.query_id) {
+        user = {
+            id: 'query_' + initData.query_id.substring(0, 8),
+            first_name: 'Пользователь',
+            username: '',
+            photo_url: null,
+            source: 'telegram_query'
+        };
+        debugLog('Данные получены через query_id');
+    }
+    
+    // Способ 3: auth_date (базовая информация)
+    if (!user && initData && initData.auth_date) {
+        user = {
+            id: 'auth_' + initData.auth_date,
+            first_name: 'Посетитель',
+            username: '',
+            photo_url: null,
+            source: 'telegram_auth'
+        };
+        debugLog('Данные получены через auth_date');
+    }
+    
+    // Способ 4: Загружаем сохраненные данные
+    if (!user) {
+        const savedUser = loadUserFromStorage();
+        if (savedUser) {
+            user = savedUser;
+            user.source = 'local_storage';
+            debugLog('Данные загружены из localStorage');
+        }
+    }
+    
+    // Способ 5: Гостевой режим
+    if (!user) {
+        user = {
+            id: 'guest_' + Date.now(),
+            first_name: 'Гость',
+            username: '',
+            photo_url: null,
+            source: 'guest'
+        };
+        debugLog('Запущен гостевой режим');
+    }
+    
+    return user;
+}
+
+// Тестовый режим (если открыто не в Telegram)
+function initializeTestMode() {
+    debugLog('Запуск в тестовом режиме');
+    
+    // Создаем тестовые данные
+    userData = {
+        id: 'test_' + Date.now(),
+        first_name: 'Тестовый',
+        last_name: 'Пользователь',
+        username: 'testuser',
+        photo_url: 'https://i.pravatar.cc/150?img=1',
+        language_code: 'ru',
+        is_premium: true,
+        source: 'test_mode'
+    };
+    
+    // Загружаем корзину
+    loadCart();
+    
+    // Показываем интерфейс
+    showMainInterface();
+    
+    // Скрываем загрузчик
+    setTimeout(() => {
+        document.getElementById('loader').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+        }, 500);
+    }, 1000);
+}
+
 // Сохраняем пользователя в localStorage
 function saveUserToStorage(user) {
     const userStorage = {
         id: user.id || Date.now(),
         first_name: user.first_name || 'Гость',
-        username: user.username || 'guest',
+        last_name: user.last_name || '',
+        username: user.username || '',
         photo_url: user.photo_url || null,
+        source: user.source || 'unknown',
         last_visit: new Date().toISOString(),
         total_orders: localStorage.getItem(`user_${user.id}_orders`) || 0,
         total_spent: localStorage.getItem(`user_${user.id}_spent`) || 0
@@ -149,11 +241,18 @@ function showMainInterface() {
     const app = document.getElementById('app');
     
     // Определяем аватарку
-    let userAvatar = '👤';
-    if (userData.photo_url) {
-        userAvatar = `<img src="${userData.photo_url}" class="user-avatar-img" alt="${userData.first_name}">`;
-    } else if (userData.first_name) {
-        userAvatar = `<div class="user-avatar-initial">${userData.first_name.charAt(0)}</div>`;
+    let userAvatar = getAvatarHTML(userData);
+    
+    // Определяем имя для приветствия
+    let greetingName = userData.first_name || 'Друг';
+    if (userData.last_name) {
+        greetingName += ' ' + userData.last_name;
+    }
+    
+    // Определяем username для отображения
+    let usernameDisplay = '';
+    if (userData.username) {
+        usernameDisplay = `<p style="color: #666; font-size: 14px; margin-top: 5px;">@${userData.username}</p>`;
     }
     
     app.innerHTML = `
@@ -177,8 +276,9 @@ function showMainInterface() {
         
         <!-- Приветствие -->
         <div class="welcome-banner fade-in" style="animation-delay: 0.1s">
-            <h2 id="user-greeting">Привет, ${userData.first_name}!</h2>
+            <h2 id="user-greeting">Привет, ${greetingName}!</h2>
             <p>Аутентичный китайский чай с доставкой</p>
+            ${usernameDisplay}
         </div>
         
         <!-- Навигация -->
@@ -244,9 +344,60 @@ function showMainInterface() {
         <div id="checkout-modal" class="modal"></div>
     `;
     
+    // Кнопка для отладки (только в разработке)
+    if (userData.source === 'test_mode') {
+        app.innerHTML += `
+            <button onclick="showDebugInfo()" style="position: fixed; bottom: 80px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: #2196F3; color: white; border: none; font-size: 20px; cursor: pointer; z-index: 1000;">
+                🐛
+            </button>
+        `;
+    }
+    
     // Загружаем товары
     loadPopularProducts();
     updateCart();
+}
+
+// Получение HTML для аватарки
+function getAvatarHTML(user) {
+    if (user.photo_url) {
+        return `<img src="${user.photo_url}" class="user-avatar-img" alt="${user.first_name}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"user-avatar-initial\">${user.first_name?.charAt(0) || 'Г'}</div>'">`;
+    } else if (user.first_name) {
+        return `<div class="user-avatar-initial">${user.first_name.charAt(0)}</div>`;
+    } else {
+        return `<div class="user-avatar-initial">👤</div>`;
+    }
+}
+
+// Показать отладочную информацию
+function showDebugInfo() {
+    const modal = document.getElementById('debug-modal');
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-bug"></i> Отладочная информация</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <h4>Данные пользователя:</h4>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow: auto; max-height: 200px;">
+${JSON.stringify(userData, null, 2)}
+                </pre>
+                
+                <h4 style="margin-top: 20px;">Telegram WebApp:</h4>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow: auto; max-height: 100px;">
+${JSON.stringify({
+    version: tg.version,
+    platform: tg.platform,
+    colorScheme: tg.colorScheme,
+    initData: tg.initDataUnsafe ? 'Доступны' : 'Не доступны'
+}, null, 2)}
+                </pre>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
 }
 
 // Загрузка популярных товаров
@@ -259,6 +410,8 @@ function loadPopularProducts() {
     ];
     
     const container = document.getElementById('popular-products');
+    if (!container) return;
+    
     container.innerHTML = products.map(product => `
         <div class="product-card" onclick="showProduct(${product.id})">
             <div class="product-image ${product.id === 2 ? 'oolong' : product.id === 3 ? 'puer' : ''}">
@@ -297,7 +450,9 @@ function addToCart(productId) {
     saveCart();
     
     // Анимация добавления
-    tg.HapticFeedback.impactOccurred('light');
+    if (tg && tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
     tg.showAlert(`✅ ${product.name} добавлен в корзину!`);
 }
 
@@ -409,7 +564,10 @@ function updateQuantity(productId, delta) {
     }
     
     saveCart();
-    tg.HapticFeedback.impactOccurred('light');
+    
+    if (tg && tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
     
     if (cart.length === 0) {
         closeModal();
@@ -494,16 +652,18 @@ function confirmCheckout() {
     }
     
     // Отправляем данные в бота
-    tg.sendData(JSON.stringify({
-        action: 'checkout',
-        user_id: savedUser?.id || userData?.id || 'guest',
-        user_name: savedUser?.first_name || userData?.first_name || 'Гость',
-        user_username: savedUser?.username || userData?.username || '',
-        cart: cart,
-        total: total,
-        timestamp: new Date().toISOString(),
-        order_id: order.id
-    }));
+    if (tg && tg.sendData) {
+        tg.sendData(JSON.stringify({
+            action: 'checkout',
+            user_id: savedUser?.id || userData?.id || 'guest',
+            user_name: savedUser?.first_name || userData?.first_name || 'Гость',
+            user_username: savedUser?.username || userData?.username || '',
+            cart: cart,
+            total: total,
+            timestamp: new Date().toISOString(),
+            order_id: order.id
+        }));
+    }
     
     // Очищаем корзину
     cart = [];
@@ -524,12 +684,7 @@ function showProfile() {
     const modal = document.getElementById('profile-modal');
     
     // Определяем аватарку для профиля
-    let profileAvatar = '👤';
-    if (savedUser.photo_url) {
-        profileAvatar = `<img src="${savedUser.photo_url}" class="profile-avatar-img" alt="${savedUser.first_name}">`;
-    } else if (savedUser.first_name) {
-        profileAvatar = `<div class="profile-avatar-initial">${savedUser.first_name.charAt(0)}</div>`;
-    }
+    let profileAvatar = getAvatarHTML(savedUser);
     
     modal.innerHTML = `
         <div class="modal-content">
@@ -598,15 +753,6 @@ function closeModal() {
 function showProduct(productId) {
     tg.showAlert('Детальная информация о товаре скоро будет доступна!');
 }
-
-// Обработчики Telegram событий
-tg.onEvent('viewportChanged', (event) => {
-    console.log('Viewport changed:', event);
-});
-
-tg.onEvent('themeChanged', () => {
-    console.log('Theme changed');
-});
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', initApp);
