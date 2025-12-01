@@ -650,3 +650,92 @@ body {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+/* Стили для изображений чая */
+.product-image.puer-1,
+.product-detail-image.puer-1,
+.catalog-item-image.puer-1 {
+    background: linear-gradient(135deg, #5D4037 0%, #3E2723 100%);
+}
+
+.product-image.red-1,
+.product-detail-image.red-1,
+.catalog-item-image.red-1 {
+    background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+}
+
+.product-image.red-2,
+.product-detail-image.red-2,
+.catalog-item-image.red-2 {
+    background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
+}
+
+.product-image.red-3,
+.product-detail-image.red-3,
+.catalog-item-image.red-3 {
+    background: linear-gradient(135deg, #EF5350 0%, #D32F2F 100%);
+}
+
+.product-image.oolong-1,
+.product-detail-image.oolong-1,
+.catalog-item-image.oolong-1 {
+    background: linear-gradient(135deg, #FB8C00 0%, #EF6C00 100%);
+}
+
+.product-image.oolong-2,
+.product-detail-image.oolong-2,
+.catalog-item-image.oolong-2 {
+    background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+}
+
+.product-image.gaba-1,
+.product-detail-image.gaba-1,
+.catalog-item-image.gaba-1 {
+    background: linear-gradient(135deg, #8BC34A 0%, #689F38 100%);
+}
+
+.product-image.green-1,
+.product-detail-image.green-1,
+.catalog-item-image.green-1 {
+    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+}
+
+.product-image.green-2,
+.product-detail-image.green-2,
+.catalog-item-image.green-2 {
+    background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%);
+}
+
+.product-image.puer-2,
+.product-detail-image.puer-2,
+.catalog-item-image.puer-2 {
+    background: linear-gradient(135deg, #6D4C41 0%, #4E342E 100%);
+}
+
+/* Для товаров без изображения (будет пустое место для будущего изображения) */
+.product-image:empty,
+.product-detail-image:empty,
+.catalog-item-image:empty {
+    background: linear-gradient(135deg, #757575 0%, #424242 100%);
+    position: relative;
+}
+
+.product-image:empty::after,
+.product-detail-image:empty::after,
+.catalog-item-image:empty::after {
+    content: "ТИ•ТИ";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    opacity: 0.3;
+}
+
+/* Вес товара в карточке */
+.product-weight {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
