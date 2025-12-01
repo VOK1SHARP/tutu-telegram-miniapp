@@ -1,0 +1,25 @@
+﻿{
+  "name": "ТИ•ТИ - Чайная лавка",
+  "short_name": "ТИ•ТИ",
+  "description": "Заказывайте аутентичный китайский чай прямо в Telegram",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4CAF50",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3048/3048379.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3048/3048379.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": [ "food", "shopping" ],
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "ru"
+}
