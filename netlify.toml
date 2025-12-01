@@ -1,13 +1,11 @@
 [build]
-publish = "public"
+  publish = "."
+  functions = "./functions"
 
 [[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
-[[headers]]
-for = "/*"
-[headers.values]
-Access-Control-Allow-Origin = "*"
-X-Frame-Options = "ALLOWALL"
+[build.environment]
+  NODE_VERSION = "18"
