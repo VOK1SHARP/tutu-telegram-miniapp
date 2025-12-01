@@ -617,3 +617,36 @@ body {
         font-size: 18px;
     }
 }
+@media (max-width: 360px) {
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .nav-item {
+        padding: 12px;
+    }
+}
+
+/* Для темной темы Telegram */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    #app {
+        background: #2d2d2d;
+        color: #ffffff;
+    }
+}
+/* Добавьте в style.css */
+.skeleton-loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
