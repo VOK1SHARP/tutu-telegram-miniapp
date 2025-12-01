@@ -15,11 +15,35 @@ function initApp() {
     
     // Получаем данные пользователя из Telegram
     const initData = tg.initDataUnsafe;
-    userData = initData.user || { 
-        first_name: 'Гость', 
-        username: 'guest',
-        photo_url: null
-    };
+    console.log('Telegram initData:', initData); // Для отладки
+    
+    // Проверяем наличие данных пользователя
+    if (initData && initData.user) {
+        // Данные из Telegram
+        userData = {
+            id: initData.user.id,
+            first_name: initData.user.first_name || 'Гость',
+            last_name: initData.user.last_name || '',
+            username: initData.user.username || '',
+            language_code: initData.user.language_code || 'ru',
+            is_premium: initData.user.is_premium || false,
+            photo_url: initData.user.photo_url || null
+        };
+    } else {
+        // Если данных нет, используем сохраненные или гостевой режим
+        const savedUser = loadUserFromStorage();
+        if (savedUser) {
+            userData = savedUser;
+        } else {
+            userData = {
+                id: 'guest_' + Date.now(),
+                first_name: 'Гость',
+                last_name: '',
+                username: '',
+                photo_url: null
+            };
+        }
+    }
     
     // Сохраняем пользователя в localStorage
     saveUserToStorage(userData);
