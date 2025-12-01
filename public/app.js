@@ -3,6 +3,70 @@ let tg = window.Telegram.WebApp;
 let cart = [];
 let userData = null;
 
+// Полный каталог товаров
+const teaCatalog = [
+    {
+        id: 1,
+        name: 'Зеленый чай Лунцзин',
+        description: 'Элитный зеленый чай с нежным ароматом и мягким вкусом',
+        price: 800,
+        category: 'green',
+        weight: '50г',
+        tags: ['Хит', 'Популярное'],
+        imageClass: 'green'
+    },
+    {
+        id: 2,
+        name: 'Улун Те Гуань Инь',
+        description: 'Полуферментированный чай с цветочным ароматом',
+        price: 1200,
+        category: 'oolong',
+        weight: '50г',
+        tags: ['Популярное'],
+        imageClass: 'oolong'
+    },
+    {
+        id: 3,
+        name: 'Пуэр Шу',
+        description: 'Выдержанный чай с землистым вкусом и глубоким ароматом',
+        price: 1500,
+        category: 'puer',
+        weight: '100г',
+        tags: ['Премиум'],
+        imageClass: 'puer'
+    },
+    {
+        id: 4,
+        name: 'Белый чай Байхао Иньчжэнь',
+        description: 'Нежный чай из молодых почек с медовым послевкусием',
+        price: 2200,
+        category: 'white',
+        weight: '30г',
+        tags: ['Элитный'],
+        imageClass: 'white'
+    },
+    {
+        id: 5,
+        name: 'Красный чай Дянь Хун',
+        description: 'Ароматный чай с нотами сухофруктов и меда',
+        price: 950,
+        category: 'red',
+        weight: '50г',
+        tags: ['Новинка'],
+        imageClass: 'red'
+    },
+    {
+        id: 6,
+        name: 'Желтый чай Цзюнь Шань Инь Чжэнь',
+        description: 'Редкий чай с мягким вкусом и тонким ароматом',
+        price: 1800,
+        category: 'yellow',
+        weight: '40г',
+        tags: ['Эксклюзив'],
+        imageClass: 'yellow'
+    }
+];
+
 // Функция для отладки
 function debugLog(message, data = null) {
     console.log(`[DEBUG] ${message}`, data || '');
@@ -153,51 +217,7 @@ function initializeTestMode() {
         }, 500);
     }, 1000);
 }
-// Добавьте в app.js:
-const teaCatalog = [
-    {
-        id: 1,
-        name: 'Зеленый чай Лунцзин',
-        description: 'Элитный зеленый чай с нежным ароматом',
-        price: 800,
-        category: 'green',
-        weight: '50г',
-        tags: ['Хит', 'Популярное'],
-        image: 'green-tea.jpg'
-    },
-    // ... остальные товары
-];
 
-function showProductDetails(productId) {
-    const product = teaCatalog.find(p => p.id === productId);
-    const modal = document.getElementById('product-modal');
-    
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>${product.name}</h3>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="product-detail-image" style="background: #4CAF50; height: 200px; border-radius: 10px; margin-bottom: 15px;"></div>
-                <p>${product.description}</p>
-                <p><strong>Вес:</strong> ${product.weight}</p>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
-                    <div class="product-price">${product.price}₽</div>
-                    <div>
-                        <button onclick="updateQuantity(${product.id}, -1)" style="padding: 8px 15px; background: #f0f0f0; border: none; border-radius: 5px; cursor: pointer;">-</button>
-                        <span style="margin: 0 10px;" id="quantity-${product.id}">1</span>
-                        <button onclick="updateQuantity(${product.id}, 1)" style="padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">+</button>
-                    </div>
-                </div>
-                <button onclick="addToCart(${product.id})" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
-                    Добавить в корзину
-                </button>
-            </div>
-        </div>
-    `;
-    modal.style.display = 'flex';
-}
 // Сохраняем пользователя в localStorage
 function saveUserToStorage(user) {
     const userStorage = {
@@ -263,6 +283,12 @@ function updateCart() {
         cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
     }
     
+    // Обновляем счетчик в навигации
+    const cartCountElements = document.querySelectorAll('.cart-count');
+    cartCountElements.forEach(el => {
+        el.textContent = totalItems;
+    });
+    
     // Обновляем футер корзины
     const cartTotal = document.getElementById('cart-total');
     const checkoutBtn = document.getElementById('checkout-btn');
@@ -314,6 +340,7 @@ function showMainInterface() {
                 </div>
                 <div class="user-avatar" onclick="showProfile()">
                     ${userAvatar}
+                    <div class="cart-badge" style="display: none; position: absolute; top: -5px; right: -5px; background: #FF5252; color: white; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; align-items: center; justify-content: center;">0</div>
                 </div>
             </div>
         </div>
@@ -386,6 +413,8 @@ function showMainInterface() {
         <div id="order-modal" class="modal"></div>
         <div id="profile-modal" class="modal"></div>
         <div id="checkout-modal" class="modal"></div>
+        <div id="debug-modal" class="modal"></div>
+        <div id="catalog-modal" class="modal"></div>
     `;
     
     // Кнопка для отладки (только в разработке)
@@ -429,6 +458,11 @@ function showDebugInfo() {
 ${JSON.stringify(userData, null, 2)}
                 </pre>
                 
+                <h4>Корзина:</h4>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow: auto; max-height: 150px;">
+${JSON.stringify(cart, null, 2)}
+                </pre>
+                
                 <h4 style="margin-top: 20px;">Telegram WebApp:</h4>
                 <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow: auto; max-height: 100px;">
 ${JSON.stringify({
@@ -446,20 +480,16 @@ ${JSON.stringify({
 
 // Загрузка популярных товаров
 function loadPopularProducts() {
-    const products = [
-        { id: 1, name: 'Зеленый чай Лунцзин', price: 800, tag: 'Хит' },
-        { id: 2, name: 'Улун Те Гуань Инь', price: 1200, tag: 'Популярное' },
-        { id: 3, name: 'Пуэр Шу', price: 1500, tag: 'Премиум' },
-        { id: 4, name: 'Белый чай', price: 2200, tag: 'Элитный' }
-    ];
-    
     const container = document.getElementById('popular-products');
     if (!container) return;
     
-    container.innerHTML = products.map(product => `
-        <div class="product-card" onclick="showProduct(${product.id})">
-            <div class="product-image ${product.id === 2 ? 'oolong' : product.id === 3 ? 'puer' : ''}">
-                ${product.tag ? `<div class="product-tag">${product.tag}</div>` : ''}
+    const popularProducts = teaCatalog.slice(0, 4); // Первые 4 товара как популярные
+    
+    container.innerHTML = popularProducts.map(product => `
+        <div class="product-card" onclick="showProductDetails(${product.id})">
+            <div class="product-image ${product.imageClass}">
+                ${product.tags && product.tags.length > 0 ? 
+                    `<div class="product-tag">${product.tags[0]}</div>` : ''}
             </div>
             <div class="product-info">
                 <h3 class="product-name">${product.name}</h3>
@@ -472,23 +502,85 @@ function loadPopularProducts() {
     `).join('');
 }
 
-// Добавление в корзину
-function addToCart(productId) {
-    const products = {
-        1: { id: 1, name: 'Зеленый чай Лунцзин', price: 800 },
-        2: { id: 2, name: 'Улун Те Гуань Инь', price: 1200 },
-        3: { id: 3, name: 'Пуэр Шу', price: 1500 },
-        4: { id: 4, name: 'Белый чай', price: 2200 }
-    };
+// Показать детали товара
+function showProductDetails(productId) {
+    const product = teaCatalog.find(p => p.id === productId);
+    if (!product) return;
     
-    const product = products[productId];
+    const modal = document.getElementById('product-modal');
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-mug-hot"></i> ${product.name}</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="product-detail-image ${product.imageClass}" style="height: 200px; border-radius: 10px; margin-bottom: 15px; position: relative;">
+                    ${product.tags && product.tags.length > 0 ? 
+                        `<div class="product-tag">${product.tags[0]}</div>` : ''}
+                </div>
+                <p style="margin-bottom: 10px;">${product.description}</p>
+                <p style="margin-bottom: 10px;"><strong>Категория:</strong> ${getCategoryName(product.category)}</p>
+                <p style="margin-bottom: 10px;"><strong>Вес:</strong> ${product.weight}</p>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <div class="product-price" style="font-size: 24px;">${product.price}₽</div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button onclick="updateCartQuantity(${product.id}, -1)" style="padding: 10px 15px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 18px;">-</button>
+                        <span style="font-size: 18px; font-weight: 600;" id="detail-quantity-${product.id}">1</span>
+                        <button onclick="updateCartQuantity(${product.id}, 1)" style="padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px;">+</button>
+                    </div>
+                </div>
+                
+                <button onclick="addToCart(${product.id}, parseInt(document.getElementById('detail-quantity-${product.id}').textContent))" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
+                    <i class="fas fa-cart-plus"></i> Добавить в корзину
+                </button>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
+
+function getCategoryName(category) {
+    const categories = {
+        'green': 'Зеленый чай',
+        'oolong': 'Улун',
+        'puer': 'Пуэр',
+        'white': 'Белый чай',
+        'red': 'Красный чай',
+        'yellow': 'Желтый чай'
+    };
+    return categories[category] || 'Чай';
+}
+
+// Обновить количество в модальном окне товара
+function updateCartQuantity(productId, delta) {
+    const quantityElement = document.getElementById(`detail-quantity-${productId}`);
+    if (!quantityElement) return;
+    
+    let quantity = parseInt(quantityElement.textContent) + delta;
+    if (quantity < 1) quantity = 1;
+    if (quantity > 99) quantity = 99;
+    
+    quantityElement.textContent = quantity;
+}
+
+// Добавление в корзину с количеством
+function addToCart(productId, quantity = 1) {
+    const product = teaCatalog.find(p => p.id === productId);
     if (!product) return;
     
     const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
-        existingItem.quantity += 1;
+        existingItem.quantity += quantity;
     } else {
-        cart.push({ ...product, quantity: 1 });
+        cart.push({ 
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: quantity 
+        });
     }
     
     saveCart();
@@ -497,12 +589,69 @@ function addToCart(productId) {
     if (tg && tg.HapticFeedback) {
         tg.HapticFeedback.impactOccurred('light');
     }
-    tg.showAlert(`✅ ${product.name} добавлен в корзину!`);
+    
+    // Показываем уведомление
+    const message = quantity > 1 ? 
+        `✅ ${product.name} (${quantity} шт.) добавлен в корзину!` :
+        `✅ ${product.name} добавлен в корзину!`;
+    
+    if (tg.showAlert) {
+        tg.showAlert(message);
+    }
+    
+    // Закрываем модальное окно товара
+    closeModal();
 }
 
 // Показать каталог
 function showCatalog() {
-    tg.showAlert('Каталог чая скоро будет доступен!');
+    const modal = document.getElementById('catalog-modal');
+    
+    const categories = {
+        'green': 'Зеленые чаи',
+        'oolong': 'Улуны',
+        'puer': 'Пуэры',
+        'white': 'Белые чаи',
+        'red': 'Красные чаи',
+        'yellow': 'Желтые чаи'
+    };
+    
+    let catalogHTML = '';
+    
+    Object.entries(categories).forEach(([categoryId, categoryName]) => {
+        const categoryProducts = teaCatalog.filter(p => p.category === categoryId);
+        
+        catalogHTML += `
+            <div class="catalog-category">
+                <h3 style="margin-bottom: 10px; color: #4CAF50;">${categoryName}</h3>
+                <div class="catalog-products">
+                    ${categoryProducts.map(product => `
+                        <div class="catalog-item" onclick="showProductDetails(${product.id})">
+                            <div class="catalog-item-image ${product.imageClass}"></div>
+                            <div class="catalog-item-info">
+                                <div style="font-weight: 600; margin-bottom: 5px;">${product.name}</div>
+                                <div style="color: #4CAF50; font-weight: 700;">${product.price}₽</div>
+                                <div style="font-size: 12px; color: #666;">${product.weight}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-list"></i> Каталог чая</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                ${catalogHTML}
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
 }
 
 // Показать заказы
@@ -517,8 +666,8 @@ function showOrders() {
         ordersHTML = orderHistory.map((order, index) => `
             <div class="order-history-item">
                 <div class="order-header">
-                    <span>Заказ #${index + 1}</span>
-                    <span>${new Date(order.date).toLocaleDateString()}</span>
+                    <span>Заказ #${order.id.toString().substr(-6)}</span>
+                    <span>${new Date(order.date).toLocaleDateString('ru-RU')}</span>
                 </div>
                 <div class="order-items">
                     ${order.items.map(item => `
@@ -529,12 +678,13 @@ function showOrders() {
                     `).join('')}
                 </div>
                 <div class="order-total">
-                    Итого: <strong>${order.total}₽</strong>
+                    Статус: <span style="color: ${order.status === 'completed' ? '#4CAF50' : order.status === 'pending' ? '#FF9800' : '#F44336'}">${getStatusText(order.status)}</span>
+                    <strong style="margin-left: auto;">${order.total}₽</strong>
                 </div>
             </div>
         `).join('');
     } else {
-        ordersHTML = '<p style="text-align: center; padding: 20px;">У вас пока нет заказов</p>';
+        ordersHTML = '<div style="text-align: center; padding: 40px 20px; color: #666;"><i class="fas fa-box-open" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i><p>У вас пока нет заказов</p></div>';
     }
     
     modal.innerHTML = `
@@ -551,10 +701,23 @@ function showOrders() {
     modal.style.display = 'flex';
 }
 
+function getStatusText(status) {
+    const statuses = {
+        'pending': 'В обработке',
+        'confirmed': 'Подтвержден',
+        'shipped': 'Отправлен',
+        'completed': 'Завершен',
+        'cancelled': 'Отменен'
+    };
+    return statuses[status] || status;
+}
+
 // Показать корзину
 function showCartModal() {
     if (cart.length === 0) {
-        tg.showAlert('🛒 Корзина пуста');
+        if (tg.showAlert) {
+            tg.showAlert('🛒 Корзина пуста');
+        }
         return;
     }
     
@@ -570,24 +733,24 @@ function showCartModal() {
             <div class="modal-body">
                 ${cart.map(item => `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee;">
-                        <div>
-                            <div style="font-weight: 600;">${item.name}</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">${item.name}</div>
                             <div style="font-size: 14px; color: #666;">${item.price}₽ × ${item.quantity}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <button onclick="updateQuantity(${item.id}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer;">-</button>
-                            <span>${item.quantity}</span>
-                            <button onclick="updateQuantity(${item.id}, 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #4CAF50; color: white; cursor: pointer;">+</button>
+                            <button onclick="updateQuantity(${item.id}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+                            <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
+                            <button onclick="updateQuantity(${item.id}, 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #4CAF50; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
                         </div>
                     </div>
                 `).join('')}
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #4CAF50;">
-                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700;">
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 15px;">
                         <span>Итого:</span>
                         <span>${total}₽</span>
                     </div>
-                    <button onclick="processCheckout()" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    <button onclick="processCheckout()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
                         <i class="fas fa-paper-plane"></i> Оформить заказ
                     </button>
                 </div>
@@ -623,7 +786,9 @@ function updateQuantity(productId, delta) {
 // Процесс оформления заказа
 function processCheckout() {
     if (cart.length === 0) {
-        tg.showAlert('Добавьте товары в корзину');
+        if (tg.showAlert) {
+            tg.showAlert('Добавьте товары в корзину');
+        }
         return;
     }
     
@@ -656,10 +821,10 @@ function processCheckout() {
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <button onclick="confirmCheckout()" style="padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    <button onclick="confirmCheckout()" style="padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
                         <i class="fas fa-check"></i> Подтвердить
                     </button>
-                    <button onclick="closeModal()" style="padding: 15px; background: #f0f0f0; color: #333; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    <button onclick="closeModal()" style="padding: 15px; background: #f0f0f0; color: #333; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
                         <i class="fas fa-times"></i> Отмена
                     </button>
                 </div>
@@ -717,7 +882,9 @@ function confirmCheckout() {
     closeModal();
     
     // Показываем подтверждение
-    tg.showAlert(`✅ Заказ #${order.id} оформлен!\n\nСумма: ${total}₽\n\nС вами свяжется менеджер для подтверждения.`);
+    if (tg.showAlert) {
+        tg.showAlert(`✅ Заказ #${order.id} оформлен!\n\nСумма: ${total}₽\n\nС вами свяжется менеджер для подтверждения.`);
+    }
 }
 
 // Показать профиль
@@ -760,11 +927,11 @@ function showProfile() {
                     </div>
                 </div>
                 
-                <button onclick="openChannel()" style="width: 100%; padding: 12px; margin-bottom: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                <button onclick="openChannel()" style="width: 100%; padding: 12px; margin-bottom: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
                     <i class="fab fa-telegram"></i> Наш канал @teatea_bar
                 </button>
                 
-                <button onclick="showSupport()" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                <button onclick="showSupport()" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
                     <i class="fas fa-headset"></i> Поддержка
                 </button>
             </div>
@@ -775,15 +942,19 @@ function showProfile() {
 
 // Открыть канал
 function openChannel() {
-    tg.openLink('https://t.me/teatea_bar');
+    if (tg.openLink) {
+        tg.openLink('https://t.me/teatea_bar');
+    }
 }
 
 // Поддержка
 function showSupport() {
-    tg.showAlert('📞 Служба поддержки:\n\n' +
-                 'Telegram: @teatea_bar\n' +
-                 'Email: support@teatea.ru\n' +
-                 'Часы работы: 10:00-20:00');
+    if (tg.showAlert) {
+        tg.showAlert('📞 Служба поддержки:\n\n' +
+                    'Telegram: @teatea_bar\n' +
+                    'Email: support@teatea.ru\n' +
+                    'Часы работы: 10:00-20:00');
+    }
 }
 
 // Закрыть модальное окно
@@ -791,11 +962,6 @@ function closeModal() {
     document.querySelectorAll('.modal').forEach(modal => {
         modal.style.display = 'none';
     });
-}
-
-// Показать товар
-function showProduct(productId) {
-    tg.showAlert('Детальная информация о товаре скоро будет доступна!');
 }
 
 // Инициализация при загрузке страницы
