@@ -1,4 +1,4 @@
-﻿// Telegram Web App инициализация
+// Telegram Web App инициализация
 let tg = window.Telegram.WebApp;
 let cart = [];
 let userData = null;
@@ -8,21 +8,28 @@ function initApp() {
     // Инициализируем Telegram Web App
     tg.ready();
     tg.expand();
-
+    
     // Настраиваем цвета
     tg.setHeaderColor('#4CAF50');
     tg.setBackgroundColor('#f0f4f7');
-
-    // Получаем данные пользователя
+    
+    // Получаем данные пользователя из Telegram
     const initData = tg.initDataUnsafe;
-    userData = initData.user || { first_name: 'Гость', id: Date.now() };
-
+    userData = initData.user || { 
+        first_name: 'Гость', 
+        username: 'guest',
+        photo_url: null
+    };
+    
+    // Сохраняем пользователя в localStorage
+    saveUserToStorage(userData);
+    
     // Загружаем корзину из localStorage
     loadCart();
-
+    
     // Показываем интерфейс
     showMainInterface();
-
+    
     // Скрываем загрузчик
     setTimeout(() => {
         document.getElementById('loader').style.opacity = '0';
@@ -31,6 +38,42 @@ function initApp() {
             document.getElementById('app').style.display = 'block';
         }, 500);
     }, 1000);
+}
+
+// Сохраняем пользователя в localStorage
+function saveUserToStorage(user) {
+    const userStorage = {
+        id: user.id || Date.now(),
+        first_name: user.first_name || 'Гость',
+        username: user.username || 'guest',
+        photo_url: user.photo_url || null,
+        last_visit: new Date().toISOString(),
+        total_orders: localStorage.getItem(`user_${user.id}_orders`) || 0,
+        total_spent: localStorage.getItem(`user_${user.id}_spent`) || 0
+    };
+    
+    localStorage.setItem('current_user', JSON.stringify(userStorage));
+    
+    // Сохраняем в историю пользователей
+    let allUsers = JSON.parse(localStorage.getItem('all_users')) || [];
+    const existingUserIndex = allUsers.findIndex(u => u.id === user.id);
+    
+    if (existingUserIndex !== -1) {
+        allUsers[existingUserIndex] = userStorage;
+    } else {
+        allUsers.push(userStorage);
+    }
+    
+    localStorage.setItem('all_users', JSON.stringify(allUsers));
+}
+
+// Загрузка пользователя из localStorage
+function loadUserFromStorage() {
+    const savedUser = localStorage.getItem('current_user');
+    if (savedUser) {
+        return JSON.parse(savedUser);
+    }
+    return null;
 }
 
 // Загрузка корзины
@@ -52,18 +95,18 @@ function saveCart() {
 function updateCart() {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
+    
     // Обновляем счетчик в заголовке
     const cartBadge = document.querySelector('.cart-badge');
     if (cartBadge) {
         cartBadge.textContent = totalItems;
         cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
     }
-
+    
     // Обновляем футер корзины
     const cartTotal = document.getElementById('cart-total');
     const checkoutBtn = document.getElementById('checkout-btn');
-
+    
     if (cartTotal && checkoutBtn) {
         if (totalItems > 0) {
             cartTotal.innerHTML = `Итого: <span>${totalPrice}₽</span>`;
@@ -75,17 +118,20 @@ function updateCart() {
             checkoutBtn.disabled = true;
         }
     }
-
-    // Сохраняем в Telegram Cloud Storage (если доступно)
-    if (tg.CloudStorage) {
-        tg.CloudStorage.setItem('cart', JSON.stringify(cart));
-    }
 }
 
 // Показать главный интерфейс
 function showMainInterface() {
     const app = document.getElementById('app');
-
+    
+    // Определяем аватарку
+    let userAvatar = '👤';
+    if (userData.photo_url) {
+        userAvatar = `<img src="${userData.photo_url}" class="user-avatar-img" alt="${userData.first_name}">`;
+    } else if (userData.first_name) {
+        userAvatar = `<div class="user-avatar-initial">${userData.first_name.charAt(0)}</div>`;
+    }
+    
     app.innerHTML = `
         <!-- Header -->
         <div class="header fade-in">
@@ -100,17 +146,15 @@ function showMainInterface() {
                     </div>
                 </div>
                 <div class="user-avatar" onclick="showProfile()">
-                    <i class="fas fa-user"></i>
-                    <span class="cart-badge" style="display: none;">0</span>
+                    ${userAvatar}
                 </div>
             </div>
         </div>
         
-        <!-- Баннер -->
-        <div class="banner fade-in" style="animation-delay: 0.1s">
-            <h2>🍵 Добро пожаловать, ${userData.first_name}!</h2>
+        <!-- Приветствие -->
+        <div class="welcome-banner fade-in" style="animation-delay: 0.1s">
+            <h2 id="user-greeting">Привет, ${userData.first_name}!</h2>
             <p>Аутентичный китайский чай с доставкой</p>
-            <a href="#" class="banner-button" onclick="showCatalog()">Смотреть каталог</a>
         </div>
         
         <!-- Навигация -->
@@ -144,7 +188,7 @@ function showMainInterface() {
                     <i class="fas fa-user"></i>
                 </div>
                 <h3>Профиль</h3>
-                <p>Бонусы и скидки</p>
+                <p>${userData.username ? '@' + userData.username : 'Ваш профиль'}</p>
             </div>
         </div>
         
@@ -162,7 +206,7 @@ function showMainInterface() {
         <div class="cart-footer fade-in" style="animation-delay: 0.4s">
             <div class="cart-content">
                 <div class="cart-total" id="cart-total">Корзина пуста</div>
-                <button class="checkout-button" id="checkout-btn" onclick="checkout()" disabled>
+                <button class="checkout-button" id="checkout-btn" onclick="processCheckout()" disabled>
                     Оформить заказ
                 </button>
             </div>
@@ -173,8 +217,9 @@ function showMainInterface() {
         <div id="product-modal" class="modal"></div>
         <div id="order-modal" class="modal"></div>
         <div id="profile-modal" class="modal"></div>
+        <div id="checkout-modal" class="modal"></div>
     `;
-
+    
     // Загружаем товары
     loadPopularProducts();
     updateCart();
@@ -188,7 +233,7 @@ function loadPopularProducts() {
         { id: 3, name: 'Пуэр Шу', price: 1500, tag: 'Премиум' },
         { id: 4, name: 'Белый чай', price: 2200, tag: 'Элитный' }
     ];
-
+    
     const container = document.getElementById('popular-products');
     container.innerHTML = products.map(product => `
         <div class="product-card" onclick="showProduct(${product.id})">
@@ -214,19 +259,19 @@ function addToCart(productId) {
         3: { id: 3, name: 'Пуэр Шу', price: 1500 },
         4: { id: 4, name: 'Белый чай', price: 2200 }
     };
-
+    
     const product = products[productId];
     if (!product) return;
-
+    
     const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
         cart.push({ ...product, quantity: 1 });
     }
-
+    
     saveCart();
-
+    
     // Анимация добавления
     tg.HapticFeedback.impactOccurred('light');
     tg.showAlert(`✅ ${product.name} добавлен в корзину!`);
@@ -235,21 +280,48 @@ function addToCart(productId) {
 // Показать каталог
 function showCatalog() {
     tg.showAlert('Каталог чая скоро будет доступен!');
-    // Здесь можно реализовать полный каталог
 }
 
 // Показать заказы
 function showOrders() {
+    const savedUser = loadUserFromStorage();
+    const orderHistory = JSON.parse(localStorage.getItem(`user_${savedUser?.id}_order_history`)) || [];
+    
     const modal = document.getElementById('order-modal');
+    
+    let ordersHTML = '';
+    if (orderHistory.length > 0) {
+        ordersHTML = orderHistory.map((order, index) => `
+            <div class="order-history-item">
+                <div class="order-header">
+                    <span>Заказ #${index + 1}</span>
+                    <span>${new Date(order.date).toLocaleDateString()}</span>
+                </div>
+                <div class="order-items">
+                    ${order.items.map(item => `
+                        <div class="order-item">
+                            <span>${item.name}</span>
+                            <span>${item.quantity} × ${item.price}₽</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="order-total">
+                    Итого: <strong>${order.total}₽</strong>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        ordersHTML = '<p style="text-align: center; padding: 20px;">У вас пока нет заказов</p>';
+    }
+    
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-box"></i> Мои заказы</h3>
+                <h3><i class="fas fa-box"></i> История заказов</h3>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
-                <p>Здесь будет история ваших заказов.</p>
-                <p>Функция в разработке...</p>
+                ${ordersHTML}
             </div>
         </div>
     `;
@@ -262,10 +334,10 @@ function showCartModal() {
         tg.showAlert('🛒 Корзина пуста');
         return;
     }
-
+    
     const modal = document.getElementById('cart-modal');
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
+    
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
@@ -292,7 +364,7 @@ function showCartModal() {
                         <span>Итого:</span>
                         <span>${total}₽</span>
                     </div>
-                    <button onclick="checkout()" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    <button onclick="processCheckout()" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-paper-plane"></i> Оформить заказ
                     </button>
                 </div>
@@ -306,15 +378,15 @@ function showCartModal() {
 function updateQuantity(productId, delta) {
     const item = cart.find(item => item.id === productId);
     if (!item) return;
-
+    
     item.quantity += delta;
     if (item.quantity <= 0) {
         cart = cart.filter(item => item.id !== productId);
     }
-
+    
     saveCart();
     tg.HapticFeedback.impactOccurred('light');
-
+    
     if (cart.length === 0) {
         closeModal();
     } else {
@@ -322,37 +394,119 @@ function updateQuantity(productId, delta) {
     }
 }
 
-// Оформление заказа
-function checkout() {
+// Процесс оформления заказа
+function processCheckout() {
     if (cart.length === 0) {
         tg.showAlert('Добавьте товары в корзину');
         return;
     }
-
+    
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const savedUser = loadUserFromStorage();
+    
+    // Показываем модальное окно подтверждения
+    const modal = document.getElementById('checkout-modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-shopping-bag"></i> Подтверждение заказа</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 48px; color: #4CAF50; margin-bottom: 10px;">📦</div>
+                    <h3 style="margin-bottom: 10px;">Заказ на ${total}₽</h3>
+                    <p>${savedUser?.first_name || 'Гость'}, подтвердите оформление заказа</p>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px;">Состав заказа:</h4>
+                    ${cart.map(item => `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>${item.name}</span>
+                            <span>${item.quantity} × ${item.price}₽</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button onclick="confirmCheckout()" style="padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-check"></i> Подтвердить
+                    </button>
+                    <button onclick="closeModal()" style="padding: 15px; background: #f0f0f0; color: #333; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-times"></i> Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
 
+// Подтверждение заказа
+function confirmCheckout() {
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const savedUser = loadUserFromStorage();
+    
+    // Сохраняем заказ в историю
+    const order = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        items: [...cart],
+        total: total,
+        status: 'pending'
+    };
+    
+    // Сохраняем заказ пользователя
+    let orderHistory = JSON.parse(localStorage.getItem(`user_${savedUser?.id}_order_history`)) || [];
+    orderHistory.unshift(order);
+    localStorage.setItem(`user_${savedUser?.id}_order_history`, JSON.stringify(orderHistory));
+    
+    // Обновляем статистику пользователя
+    if (savedUser) {
+        savedUser.total_orders = (parseInt(savedUser.total_orders) || 0) + 1;
+        savedUser.total_spent = (parseFloat(savedUser.total_spent) || 0) + total;
+        localStorage.setItem('current_user', JSON.stringify(savedUser));
+    }
+    
     // Отправляем данные в бота
     tg.sendData(JSON.stringify({
         action: 'checkout',
-        user_id: userData.id,
-        user_name: userData.first_name,
+        user_id: savedUser?.id || userData?.id || 'guest',
+        user_name: savedUser?.first_name || userData?.first_name || 'Гость',
+        user_username: savedUser?.username || userData?.username || '',
         cart: cart,
         total: total,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        order_id: order.id
     }));
-
-    tg.showAlert(`✅ Заказ на ${total}₽ отправлен! С вами свяжется менеджер.`);
-
+    
     // Очищаем корзину
     cart = [];
     saveCart();
+    
+    // Закрываем модальные окна
     closeModal();
+    
+    // Показываем подтверждение
+    tg.showAlert(`✅ Заказ #${order.id} оформлен!\n\nСумма: ${total}₽\n\nС вами свяжется менеджер для подтверждения.`);
 }
 
 // Показать профиль
 function showProfile() {
+    const savedUser = loadUserFromStorage() || userData;
+    const orderHistory = JSON.parse(localStorage.getItem(`user_${savedUser?.id}_order_history`)) || [];
+    
     const modal = document.getElementById('profile-modal');
-
+    
+    // Определяем аватарку для профиля
+    let profileAvatar = '👤';
+    if (savedUser.photo_url) {
+        profileAvatar = `<img src="${savedUser.photo_url}" class="profile-avatar-img" alt="${savedUser.first_name}">`;
+    } else if (savedUser.first_name) {
+        profileAvatar = `<div class="profile-avatar-initial">${savedUser.first_name.charAt(0)}</div>`;
+    }
+    
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
@@ -361,26 +515,30 @@ function showProfile() {
             </div>
             <div class="modal-body">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="width: 80px; height: 80px; margin: 0 auto 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; color: white;">
-                        ${userData.first_name ? userData.first_name.charAt(0) : 'Г'}
+                    <div style="width: 100px; height: 100px; margin: 0 auto 15px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; color: white;">
+                        ${profileAvatar}
                     </div>
-                    <h3>${userData.first_name || 'Гость'}</h3>
-                    ${userData.id ? `<p style="color: #666; font-size: 14px;">ID: ${userData.id}</p>` : ''}
+                    <h3>${savedUser.first_name || 'Гость'}</h3>
+                    ${savedUser.username ? `<p style="color: #666; font-size: 16px; margin-top: 5px;">@${savedUser.username}</p>` : ''}
+                    ${savedUser.id ? `<p style="color: #999; font-size: 14px; margin-top: 5px;">ID: ${savedUser.id}</p>` : ''}
                 </div>
                 
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>Бонусные баллы:</span>
-                        <span style="font-weight: 700; color: #4CAF50;">150</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Заказов всего:</span>
-                        <span style="font-weight: 700;">2</span>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px; color: #333;">📊 Статистика</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            <div style="font-size: 24px; font-weight: 700; color: #4CAF50; margin-bottom: 5px;">${orderHistory.length}</div>
+                            <div style="font-size: 12px; color: #666;">Всего заказов</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            <div style="font-size: 24px; font-weight: 700; color: #2196F3; margin-bottom: 5px;">${savedUser.total_spent || 0}₽</div>
+                            <div style="font-size: 12px; color: #666;">Всего потрачено</div>
+                        </div>
                     </div>
                 </div>
                 
                 <button onclick="openChannel()" style="width: 100%; padding: 12px; margin-bottom: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
-                    <i class="fab fa-telegram"></i> Наш канал
+                    <i class="fab fa-telegram"></i> Наш канал @teatea_bar
                 </button>
                 
                 <button onclick="showSupport()" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
@@ -400,9 +558,9 @@ function openChannel() {
 // Поддержка
 function showSupport() {
     tg.showAlert('📞 Служба поддержки:\n\n' +
-        'Telegram: @teatea_bar\n' +
-        'Email: support@teatea.ru\n' +
-        'Часы работы: 10:00-20:00');
+                 'Telegram: @teatea_bar\n' +
+                 'Email: support@teatea.ru\n' +
+                 'Часы работы: 10:00-20:00');
 }
 
 // Закрыть модальное окно
