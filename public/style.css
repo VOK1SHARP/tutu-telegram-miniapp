@@ -553,3 +553,21 @@ body {
 .fade-in {
     animation: fadeIn 0.5s ease forwards;
 }
+/* --- Bottom-sheet модалки (для product-modal) --- */
+.modal.bottom-sheet {
+    align-items: flex-end; /* при добавлении класса modal станет "нижним листом" */
+}
+
+.modal.bottom-sheet .modal-content {
+    width: 100%;
+    max-width: 700px;
+    border-radius: 20px 20px 0 0;
+    margin: 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+    max-height: 85vh;
+}
+
+/* Обеспечим нормальный скролл внутри модалки */
+.modal .modal-body {
+    -webkit-overflow-scrolling: touch;
+}
