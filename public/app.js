@@ -3,6 +3,7 @@ let tg = window.Telegram.WebApp;
 let cart = [];
 let userData = null;
 let userId = null;
+let isTelegramUser = false;
 
 // Инициализация приложения
 async function initApp() {
@@ -15,11 +16,10 @@ async function initApp() {
     tg.setBackgroundColor('#f0f4f7');
     
     // Получаем данные пользователя
-    const initData = tg.initDataUnsafe;
-    userData = initData.user || { first_name: 'Гость', last_name: '', username: '' };
+    userData = await getUserData();
     
     // Генерируем уникальный ID пользователя
-    userId = generateUserId(userData);
+    userId = generateUserId();
     
     // Загружаем корзину с синхронизацией
     await loadCart();
@@ -40,12 +40,72 @@ async function initApp() {
     }, 1000);
 }
 
+// Получение данных пользователя
+async function getUserData() {
+    // Пробуем получить данные из Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+        try {
+            const initData = tg.initDataUnsafe;
+            console.log('Telegram initData:', initData);
+            
+            if (initData && initData.user) {
+                isTelegramUser = true;
+                const user = initData.user;
+                
+                // Формируем URL фото
+                let photoUrl = '';
+                if (user.photo_url) {
+                    photoUrl = user.photo_url;
+                }
+                
+                return {
+                    id: user.id,
+                    first_name: user.first_name || '',
+                    last_name: user.last_name || '',
+                    username: user.username || '',
+                    photo_url: photoUrl,
+                    is_bot: user.is_bot || false,
+                    language_code: user.language_code || 'ru'
+                };
+            }
+        } catch (error) {
+            console.error('Error getting Telegram user data:', error);
+        }
+    }
+    
+    // Если данные из Telegram не получены, пробуем получить из URL параметров
+    const urlParams = new URLSearchParams(window.location.search);
+    const tgUser = urlParams.get('tgUser');
+    
+    if (tgUser) {
+        try {
+            const parsedUser = JSON.parse(decodeURIComponent(tgUser));
+            isTelegramUser = true;
+            return parsedUser;
+        } catch (e) {
+            console.error('Error parsing tgUser param:', e);
+        }
+    }
+    
+    // Если Telegram данные недоступны, создаем гостевого пользователя
+    return {
+        id: null,
+        first_name: 'Гость',
+        last_name: '',
+        username: '',
+        photo_url: '',
+        is_bot: false,
+        language_code: 'ru'
+    };
+}
+
 // Генерация уникального ID пользователя
-function generateUserId(userData) {
-    if (userData.id) {
+function generateUserId() {
+    if (isTelegramUser && userData.id) {
         return `tg_${userData.id}`;
     }
-    // Для гостей используем localStorage ID
+    
+    // Для гостей используем постоянный ID из localStorage
     let guestId = localStorage.getItem('tutu_guest_id');
     if (!guestId) {
         guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -214,43 +274,92 @@ const teaCatalog = [
     }
 ];
 
-// Загрузка корзины с синхронизацией
+// Загрузка корзины с улучшенной синхронизацией
 async function loadCart() {
-    // Пробуем загрузить из Telegram Cloud Storage
-    if (tg.CloudStorage) {
+    // Сначала пробуем загрузить из Telegram Cloud Storage (самый приоритетный)
+    if (tg.CloudStorage && isTelegramUser) {
         try {
-            const cloudCart = await tg.CloudStorage.getItem('cart');
+            console.log('Trying to load cart from Telegram Cloud Storage...');
+            const cloudCart = await new Promise((resolve) => {
+                tg.CloudStorage.getItem('cart', (error, value) => {
+                    if (!error && value) {
+                        console.log('Cart loaded from Telegram Cloud Storage:', value);
+                        resolve(value);
+                    } else {
+                        console.log('No cart in Telegram Cloud Storage:', error);
+                        resolve(null);
+                    }
+                });
+            });
+            
             if (cloudCart) {
-                cart = JSON.parse(cloudCart);
-                return;
+                try {
+                    const parsedCart = JSON.parse(cloudCart);
+                    cart = Array.isArray(parsedCart) ? parsedCart : [];
+                    console.log('Cart loaded from Telegram Cloud:', cart);
+                    return;
+                } catch (parseError) {
+                    console.error('Error parsing cloud cart:', parseError);
+                }
             }
         } catch (error) {
-            console.log('Cloud storage not available:', error);
+            console.log('Telegram Cloud Storage error:', error);
         }
     }
     
-    // Пробуем загрузить из localStorage с ключом по userId
+    // Затем пробуем загрузить из localStorage с ключом по userId
     const localStorageKey = `tutu_cart_${userId}`;
+    console.log('Loading cart from localStorage key:', localStorageKey);
     const savedCart = localStorage.getItem(localStorageKey);
+    
     if (savedCart) {
-        cart = JSON.parse(savedCart);
+        try {
+            cart = JSON.parse(savedCart);
+            console.log('Cart loaded from localStorage:', cart);
+        } catch (e) {
+            console.error('Error parsing localStorage cart:', e);
+            cart = [];
+        }
+    } else {
+        console.log('No cart found in localStorage');
+        cart = [];
     }
 }
 
-// Сохранение корзины с синхронизацией
+// Сохранение корзины с улучшенной синхронизацией
 async function saveCart() {
+    console.log('Saving cart:', cart);
+    
     // Сохраняем в localStorage с ключом по userId
     const localStorageKey = `tutu_cart_${userId}`;
     localStorage.setItem(localStorageKey, JSON.stringify(cart));
+    console.log('Cart saved to localStorage with key:', localStorageKey);
     
-    // Пробуем сохранить в Telegram Cloud Storage
-    if (tg.CloudStorage) {
+    // Для Telegram пользователей пробуем сохранить в Cloud Storage
+    if (tg.CloudStorage && isTelegramUser) {
         try {
-            await tg.CloudStorage.setItem('cart', JSON.stringify(cart));
+            await new Promise((resolve, reject) => {
+                tg.CloudStorage.setItem('cart', JSON.stringify(cart), (error) => {
+                    if (error) {
+                        console.error('Error saving to Telegram Cloud Storage:', error);
+                        reject(error);
+                    } else {
+                        console.log('Cart saved to Telegram Cloud Storage');
+                        resolve();
+                    }
+                });
+            });
         } catch (error) {
-            console.log('Cloud storage save failed:', error);
+            console.log('Telegram Cloud Storage save failed:', error);
         }
     }
+    
+    // Также сохраняем в общий localStorage для резервного копирования
+    localStorage.setItem('tutu_cart_backup', JSON.stringify({
+        userId: userId,
+        cart: cart,
+        timestamp: new Date().toISOString()
+    }));
     
     updateCart();
 }
@@ -290,14 +399,46 @@ function updateCart() {
     }
 }
 
-// Загрузка истории заказов
+// Загрузка истории заказов с синхронизацией
 async function loadOrders() {
+    // Сначала пробуем Telegram Cloud Storage
+    if (tg.CloudStorage && isTelegramUser) {
+        try {
+            const cloudOrders = await new Promise((resolve) => {
+                tg.CloudStorage.getItem('orders', (error, value) => {
+                    if (!error && value) resolve(value);
+                    else resolve(null);
+                });
+            });
+            
+            if (cloudOrders) {
+                try {
+                    return JSON.parse(cloudOrders);
+                } catch (e) {
+                    console.error('Error parsing cloud orders:', e);
+                }
+            }
+        } catch (error) {
+            console.log('Cloud storage orders error:', error);
+        }
+    }
+    
+    // Затем localStorage
     const localStorageKey = `tutu_orders_${userId}`;
     const savedOrders = localStorage.getItem(localStorageKey);
-    return savedOrders ? JSON.parse(savedOrders) : [];
+    
+    if (savedOrders) {
+        try {
+            return JSON.parse(savedOrders);
+        } catch (e) {
+            console.error('Error parsing localStorage orders:', e);
+        }
+    }
+    
+    return [];
 }
 
-// Сохранение заказа
+// Сохранение заказа с синхронизацией
 async function saveOrder(order) {
     const orders = await loadOrders();
     orders.push(order);
@@ -306,11 +447,16 @@ async function saveOrder(order) {
     localStorage.setItem(localStorageKey, JSON.stringify(orders));
     
     // Синхронизация с Telegram Cloud Storage
-    if (tg.CloudStorage) {
+    if (tg.CloudStorage && isTelegramUser) {
         try {
-            await tg.CloudStorage.setItem('orders', JSON.stringify(orders));
+            await new Promise((resolve, reject) => {
+                tg.CloudStorage.setItem('orders', JSON.stringify(orders), (error) => {
+                    if (error) reject(error);
+                    else resolve();
+                });
+            });
         } catch (error) {
-            console.log('Cloud storage save failed:', error);
+            console.log('Cloud storage orders save failed:', error);
         }
     }
 }
@@ -319,10 +465,14 @@ async function saveOrder(order) {
 function showMainInterface() {
     const app = document.getElementById('app');
     
-    // Получаем URL аватарки пользователя
-    const userPhotoUrl = userData.photo_url || '';
-    const displayName = userData.first_name || 'Гость';
+    // Формируем данные для отображения
+    const firstName = userData.first_name || 'Гость';
+    const lastName = userData.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
     const username = userData.username ? `@${userData.username}` : '';
+    
+    // Проверяем наличие фото
+    const hasPhoto = userData.photo_url && userData.photo_url.trim() !== '';
     
     app.innerHTML = `
         <!-- Header -->
@@ -337,20 +487,23 @@ function showMainInterface() {
                         <div class="subtitle">Чайная лавка</div>
                     </div>
                 </div>
-                <div class="user-avatar" onclick="showProfile()">
-                    ${userPhotoUrl ? 
-                        `<img src="${userPhotoUrl}" alt="Аватар" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : 
+                <div class="user-avatar" onclick="showProfile()" title="${fullName}${username ? ` (${username})` : ''}">
+                    ${hasPhoto ? 
+                        `<img src="${userData.photo_url}" alt="${fullName}" 
+                             onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>';"
+                             style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : 
                         `<i class="fas fa-user"></i>`
                     }
                     <span class="cart-badge" style="display: none;">0</span>
+                    ${isTelegramUser ? `<div class="tg-badge" title="Telegram пользователь">TG</div>` : ''}
                 </div>
             </div>
         </div>
         
         <!-- Баннер -->
         <div class="banner fade-in" style="animation-delay: 0.1s">
-            <h2>🍵 Добро пожаловать, ${displayName}!</h2>
-            <p>Аутентичный китайский чай с доставкой</p>
+            <h2>🍵 Добро пожаловать, ${firstName}!</h2>
+            <p>${isTelegramUser ? 'Рады видеть вас снова!' : 'Аутентичный китайский чай с доставкой'}</p>
             <a href="#" class="banner-button" onclick="showFullCatalog()">Смотреть каталог</a>
         </div>
         
@@ -424,7 +577,7 @@ function showMainInterface() {
 
 // Загрузка популярных товаров
 function loadPopularProducts() {
-    const popularTeas = teaCatalog.filter(tea => tea.tag);
+    const popularTeas = teaCatalog.filter(tea => tea.tag).slice(0, 4);
     
     const container = document.getElementById('popular-products');
     container.innerHTML = popularTeas.map(tea => `
@@ -765,7 +918,7 @@ function showProfile() {
                 <div style="text-align: center; margin-bottom: 25px;">
                     <div style="width: 100px; height: 100px; margin: 0 auto 15px; background: ${userPhotoUrl ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${userPhotoUrl ? 'inherit' : '42px'}; color: white; overflow: hidden; border: 3px solid #4CAF50;">
                         ${userPhotoUrl ? 
-                            `<img src="${userPhotoUrl}" alt="Аватар" style="width: 100%; height: 100%; object-fit: cover;">` : 
+                            `<img src="${userPhotoUrl}" alt="${fullName}" style="width: 100%; height: 100%; object-fit: cover;">` : 
                             `${firstName.charAt(0)}`
                         }
                     </div>
@@ -834,10 +987,49 @@ function closeModal() {
     });
 }
 
-// Показать каталог (старая функция для обратной совместимости)
-function showCatalog() {
-    showFullCatalog();
+// Проверка и обновление синхронизации
+async function checkAndSyncData() {
+    if (isTelegramUser && tg.CloudStorage) {
+        try {
+            // Проверяем, есть ли более свежие данные в Cloud Storage
+            const cloudCart = await new Promise((resolve) => {
+                tg.CloudStorage.getItem('cart', (error, value) => {
+                    if (!error && value) resolve(value);
+                    else resolve(null);
+                });
+            });
+            
+            if (cloudCart) {
+                const parsedCloudCart = JSON.parse(cloudCart);
+                const localStorageKey = `tutu_cart_${userId}`;
+                const localCart = localStorage.getItem(localStorageKey);
+                
+                // Если данные в Cloud Storage новее или localCart пуст
+                if (!localCart || parsedCloudCart.length > JSON.parse(localCart).length) {
+                    cart = parsedCloudCart;
+                    await saveCart();
+                    updateCart();
+                    console.log('Cart synced from Cloud Storage');
+                }
+            }
+        } catch (error) {
+            console.log('Sync check error:', error);
+        }
+    }
 }
+
+// Вызываем проверку синхронизации при загрузке
+setTimeout(checkAndSyncData, 2000);
+
+// Обработчик для получения сообщений от родительского окна (если запущено в iframe)
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'telegram_user_data') {
+        userData = event.data.user;
+        isTelegramUser = true;
+        userId = generateUserId();
+        showMainInterface();
+    }
+});
 
 // Обработчики Telegram событий
 tg.onEvent('viewportChanged', (event) => {
@@ -855,3 +1047,18 @@ document.addEventListener('DOMContentLoaded', initApp);
 window.addEventListener('beforeunload', () => {
     saveCart();
 });
+
+// Старая функция для обратной совместимости
+function showCatalog() {
+    showFullCatalog();
+}
+
+// Функция для отладки (можно вызывать из консоли)
+function debugUser() {
+    console.log('User Data:', userData);
+    console.log('User ID:', userId);
+    console.log('Is Telegram User:', isTelegramUser);
+    console.log('Cart:', cart);
+    console.log('Telegram WebApp:', tg);
+    console.log('Telegram initDataUnsafe:', tg.initDataUnsafe);
+}
