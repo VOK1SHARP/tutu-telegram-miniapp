@@ -1,3 +1,4 @@
+index.html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -32,27 +33,5 @@
     </div>
 
     <script src="app.js"></script>
-    
-    <!-- Скрипт для очистки старых Service Workers (если они были) -->
-    <script>
-        // Очистка старых Service Workers если они были зарегистрированы
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                }
-                console.log('Old Service Workers removed');
-            });
-            
-            // Также очищаем кэш
-            if (caches && caches.keys) {
-                caches.keys().then(function(cacheNames) {
-                    cacheNames.forEach(function(cacheName) {
-                        caches.delete(cacheName);
-                    });
-                });
-            }
-        }
-    </script>
 </body>
 </html>
