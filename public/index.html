@@ -16,8 +16,37 @@
     <meta property="og:description" content="Заказывайте аутентичный китайский чай прямо в Telegram!">
     <meta property="og:image" content="https://ваш-сайт.netlify.app/images/og-image.jpg">
     <meta property="og:url" content="https://ваш-сайт.netlify.app">
+    
+    <!-- Скрипт для проверки Telegram WebApp -->
+    <script>
+        // Проверяем, запущено ли в Telegram
+        function isTelegramWebApp() {
+            return window.Telegram && window.Telegram.WebApp;
+        }
+        
+        // Функция для отладки
+        function debugTelegram() {
+            if (isTelegramWebApp()) {
+                console.log('Telegram WebApp доступен');
+                console.log('Версия:', Telegram.WebApp.version);
+                console.log('Платформа:', Telegram.WebApp.platform);
+                console.log('Инициализация:', Telegram.WebApp.initData);
+                console.log('Пользователь:', Telegram.WebApp.initDataUnsafe?.user);
+            } else {
+                console.log('Telegram WebApp НЕ доступен');
+            }
+        }
+        
+        // Вызываем отладку при загрузке
+        window.addEventListener('load', debugTelegram);
+    </script>
 </head>
 <body>
+    <!-- Индикатор синхронизации -->
+    <div id="sync-indicator" class="sync-indicator">
+        <i class="fas fa-sync-alt fa-spin"></i> Синхронизация...
+    </div>
+    
     <div id="app">
         <!-- Контент загружается через JavaScript -->
     </div>
@@ -29,10 +58,35 @@
                 <i class="fas fa-leaf fa-spin"></i>
             </div>
             <h2>ТИ•ТИ</h2>
-            <p>Загружаем чайную лавку...</p>
+            <p id="loader-text">Загружаем чайную лавку...</p>
+            <p id="loader-status" style="font-size: 12px; opacity: 0.7; margin-top: 10px;"></p>
         </div>
     </div>
 
     <script src="app.js"></script>
+    
+    <script>
+        // Дополнительная проверка для Telegram
+        document.addEventListener('DOMContentLoaded', function() {
+            const loaderText = document.getElementById('loader-text');
+            const loaderStatus = document.getElementById('loader-status');
+            
+            if (isTelegramWebApp()) {
+                loaderStatus.textContent = 'Определяем пользователя Telegram...';
+                
+                // Небольшая задержка для инициализации Telegram WebApp
+                setTimeout(() => {
+                    const tg = window.Telegram.WebApp;
+                    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                        loaderStatus.textContent = `Привет, ${tg.initDataUnsafe.user.first_name || 'пользователь'}!`;
+                    } else {
+                        loaderStatus.textContent = 'Telegram WebApp загружен, но данные пользователя недоступны';
+                    }
+                }, 1000);
+            } else {
+                loaderStatus.textContent = 'Запущено вне Telegram';
+            }
+        });
+    </script>
 </body>
 </html>
