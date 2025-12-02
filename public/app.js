@@ -228,7 +228,15 @@ async function getUserData(){
             if (maybe && maybe.user) {
                 const u = maybe.user;
                 isTelegramUser = true;
-                return { id: u.id || null, first_name: u.first_name || '', last_name: u.last_name || '', username: u.username || '', photo_url: u.photo_url || '', is_bot: u.is_bot || false, language_code: u.language_code || 'ru' };
+                return { 
+                    id: u.id || null, 
+                    first_name: u.first_name || '', 
+                    last_name: u.last_name || '', 
+                    username: u.username || '', 
+                    photo_url: u.photo_url || '', 
+                    is_bot: u.is_bot || false, 
+                    language_code: u.language_code || 'ru' 
+                };
             }
             await sleep(120);
         }
@@ -238,7 +246,15 @@ async function getUserData(){
         const p = new URLSearchParams(window.location.search).get('tgUser');
         if (p) return JSON.parse(decodeURIComponent(p));
     } catch(e){ log('tgUser parse fail', e); }
-    return { id:null, first_name:'Гость', last_name:'', username:'', photo_url:'', is_bot:false, language_code:'ru' };
+    return { 
+        id: null, 
+        first_name: 'Гость', 
+        last_name: '', 
+        username: '', 
+        photo_url: '', 
+        is_bot: false, 
+        language_code: 'ru' 
+    };
 }
 
 // =========================
