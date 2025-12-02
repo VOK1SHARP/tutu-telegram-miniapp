@@ -2,9 +2,10 @@
 let tg = window.Telegram.WebApp;
 let cart = [];
 let userData = null;
+let userId = null;
 
 // Инициализация приложения
-function initApp() {
+async function initApp() {
     // Инициализируем Telegram Web App
     tg.ready();
     tg.expand();
@@ -15,10 +16,16 @@ function initApp() {
     
     // Получаем данные пользователя
     const initData = tg.initDataUnsafe;
-    userData = initData.user || { first_name: 'Гость', id: Date.now() };
+    userData = initData.user || { first_name: 'Гость', last_name: '', username: '' };
     
-    // Загружаем корзину из localStorage
-    loadCart();
+    // Генерируем уникальный ID пользователя
+    userId = generateUserId(userData);
+    
+    // Загружаем корзину с синхронизацией
+    await loadCart();
+    
+    // Загружаем историю заказов
+    await loadOrders();
     
     // Показываем интерфейс
     showMainInterface();
@@ -33,18 +40,218 @@ function initApp() {
     }, 1000);
 }
 
-// Загрузка корзины
-function loadCart() {
-    const savedCart = localStorage.getItem('tutu_cart');
+// Генерация уникального ID пользователя
+function generateUserId(userData) {
+    if (userData.id) {
+        return `tg_${userData.id}`;
+    }
+    // Для гостей используем localStorage ID
+    let guestId = localStorage.getItem('tutu_guest_id');
+    if (!guestId) {
+        guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('tutu_guest_id', guestId);
+    }
+    return guestId;
+}
+
+// База данных продуктов
+const teaCatalog = [
+    {
+        id: 1,
+        name: 'ЛАО ЧА ТОУ',
+        subtitle: 'Старые чайные головы',
+        type: 'Пуэр',
+        price: 1200,
+        description: 'Насыщенный и бархатистый. Настой — густой, тёмно-коричневый с рубиновыми отблесками. Во вкусе преобладают тёплые ноты ореха, карамели, сухофруктов и лёгкой древесной горчинки. Послевкусие долгое, с приятными сладковатыми и пряными оттенками.',
+        brewing: [
+            '🌿 5 гр чая на 500 мл воды',
+            '🌡 температура 95°C и выше',
+            '⏳ время заваривания — 3-5 минут'
+        ],
+        benefits: [
+            '♥️ мощный природный антиоксидант, укрепляет сердце и сосуды, снимает воспаление',
+            '🦠 укрепляет иммунную систему и повышает сопротивляемость вирусам и простудным заболеваниям',
+            '⚡️способствует улучшению работы нервной системы, придает организму энергию, устраняет головную боль'
+        ],
+        tag: 'Хит'
+    },
+    {
+        id: 2,
+        name: 'ХЭЙ ЦЗИНЬ',
+        subtitle: 'Черное золото',
+        type: 'Красный чай',
+        price: 950,
+        description: 'Аромат сладости пронизывает тело, становясь его основной нотой, окруженной едва заметным пряно-древесным ореолом. Настой гладкий, сладкий, приятный, с едва заметной кислинкой. Послевкусие тонкое, карамельное, в нем различаются оттенки ванили.',
+        brewing: [
+            '🌿 5-8 гр на 150-200 мл воды',
+            '🌡 температура 85-95°C',
+            '⏳ второй на 20-30 секунд'
+        ],
+        benefits: [
+            '❄️ согревает в холодные дни',
+            '🏡 снимает усталость и дарит ощущение уюта и гармонии',
+            '🦠 помогает при простудных заболеваниях, так как расширяет дыхательные пути',
+            '🧠 способствует улучшению памяти и работы мозга'
+        ],
+        tag: 'Популярное'
+    },
+    {
+        id: 3,
+        name: 'ЖОУ ГУЙ НУН СЯН',
+        subtitle: 'Мясистая корица',
+        type: 'Улун',
+        price: 1100,
+        description: 'Чай для концентрации, погружения, имеет приятный ярко выраженный топленый вкус с ореховыми нотками, приятный аромат, согревает и успокаивает. Отличный баланс вкуса и аромата. Табачные, медовые и фруктово-цитрусовые нотки.',
+        brewing: [
+            '🌿 5-8 гр на 150-200 мл воды',
+            '🌡 температура 80-90°C',
+            '⏳ второй на 30-40 секунд'
+        ],
+        benefits: [
+            '🦋 стимулирует обмен веществ, что способствует снижению веса',
+            '❤️ снижает уровень вредного холестерина в крови',
+            '😴 успокаивающе воздействует на нервную систему',
+            '🧠 улучшает когнитивные функции и память'
+        ],
+        tag: 'Рекомендуем'
+    },
+    {
+        id: 4,
+        name: 'ДЯНЬ ХУН',
+        subtitle: 'Красный чай из Юньнани',
+        type: 'Красный чай',
+        price: 850,
+        description: 'Теплый, хлебно-медовый аромат. Вкус прямой и насыщенный, мягкая сладость, небольшая терпкость и приятная плотность в чашке. Легко бодрит и отлично подходит как повседневный, рабочий чай для любого времени суток.',
+        brewing: [
+            '🌿 5-8 гр на 150-200 мл воды',
+            '🌡 температура 85-95°C',
+            '⏳ второй на 20-30 секунд'
+        ],
+        benefits: [
+            '❄️ согревает в холодные дни',
+            '🏡 снимает усталость и дарит ощущение уюта',
+            '🦠 помогает при простудных заболеваниях',
+            '🧠 способствует улучшению памяти'
+        ]
+    },
+    {
+        id: 5,
+        name: 'ГАБА МАО ЧА',
+        subtitle: 'Чай-сырец',
+        type: 'Габа',
+        price: 1400,
+        description: 'В аромате жареные семечки, кедровые орехи переходящие в свежий мёд. Во вкусе кешью, кедровые орешки, нота вишневой косточки с неяркой кислинкой.',
+        brewing: [
+            '🌿 5-8 гр на 150-200 мл воды',
+            '🌡 температура 85°C',
+            '⏳ второй на 20-30 секунд'
+        ],
+        benefits: [
+            '♥️ полезен для сердечно-сосудистой системы',
+            '🥣 улучшает работу пищеварительной системы',
+            '👳‍♂️снимает головные боли',
+            '🦋адсорбирует токсины и жиры'
+        ],
+        tag: 'Новинка'
+    },
+    {
+        id: 6,
+        name: 'ГУ ШУ ХУН ЧА',
+        subtitle: 'Красный чай со старых деревьев',
+        type: 'Красный чай',
+        price: 1300,
+        description: 'Насыщенные медово-сливовые оттенки, небольшая маслянистость, абрикосовая легкая косточка на послевкусии, сладкий.',
+        brewing: [
+            '🌿 5-8 гр на 150-200 мл воды',
+            '🌡 температура 85-90°C',
+            '⏳ второй на 20-30 секунд'
+        ],
+        benefits: [
+            '❄️ согревает в холодные дни',
+            '🏡 снимает усталость и дарит гармонию',
+            '🦠 помогает при простудных заболеваниях',
+            '🧠 способствует улучшению памяти'
+        ]
+    },
+    {
+        id: 7,
+        name: 'ТЕ ГУАНЬ ИНЬ',
+        subtitle: 'Железная богиня милосердия',
+        type: 'Улун',
+        price: 1050,
+        description: 'Классический расслабляющий светлый улун с интересной и многогранной лугово-травной и цветочной вкусоароматикой, а также яркой сиреневой кислинкой на послевкусии. Хорошо расслабляет, отлично подойдет для посиделок в компании.',
+        brewing: [
+            '🌿 5-8 гр на 150-200 мл воды',
+            '🌡 температура 85°C',
+            '⏳ второй на 20-25 секунд'
+        ],
+        benefits: [
+            '👨🏻‍🦳 содержит антиоксиданты, предотвращающие старение',
+            '🦷 профилактика заболеваний зубов и костей',
+            '❤️ положительно сказывается на здоровье сердца',
+            '🧘🏻‍♀️избавляет от тревожного состояния'
+        ],
+        tag: 'Классика'
+    },
+    {
+        id: 8,
+        name: 'МО ЛИ ХУА ЧА',
+        subtitle: 'Жасмин',
+        type: 'Зеленый чай',
+        price: 900,
+        description: 'Свежий жасминовый аромат с нежными цветочными оттенками, вкус сбалансированный и приятный. Оставляет тёплое, запоминающее послевкусие. Для любителей жасмина отличный вариант для старта дня на постоянной основе.',
+        brewing: [
+            '🌿 5-8 гр на 150-200 мл воды',
+            '🌡 температура 70°C',
+            '⏳ второй на 20-40 секунд'
+        ],
+        benefits: [
+            '🧘🏻‍♀️ снимает стресс',
+            '🦋 способствует похудению',
+            '✨ выводит шлаки и токсины',
+            '⚡️ тонизирует и бодрит'
+        ]
+    }
+];
+
+// Загрузка корзины с синхронизацией
+async function loadCart() {
+    // Пробуем загрузить из Telegram Cloud Storage
+    if (tg.CloudStorage) {
+        try {
+            const cloudCart = await tg.CloudStorage.getItem('cart');
+            if (cloudCart) {
+                cart = JSON.parse(cloudCart);
+                return;
+            }
+        } catch (error) {
+            console.log('Cloud storage not available:', error);
+        }
+    }
+    
+    // Пробуем загрузить из localStorage с ключом по userId
+    const localStorageKey = `tutu_cart_${userId}`;
+    const savedCart = localStorage.getItem(localStorageKey);
     if (savedCart) {
         cart = JSON.parse(savedCart);
     }
-    updateCart();
 }
 
-// Сохранение корзины
-function saveCart() {
-    localStorage.setItem('tutu_cart', JSON.stringify(cart));
+// Сохранение корзины с синхронизацией
+async function saveCart() {
+    // Сохраняем в localStorage с ключом по userId
+    const localStorageKey = `tutu_cart_${userId}`;
+    localStorage.setItem(localStorageKey, JSON.stringify(cart));
+    
+    // Пробуем сохранить в Telegram Cloud Storage
+    if (tg.CloudStorage) {
+        try {
+            await tg.CloudStorage.setItem('cart', JSON.stringify(cart));
+        } catch (error) {
+            console.log('Cloud storage save failed:', error);
+        }
+    }
+    
     updateCart();
 }
 
@@ -58,6 +265,12 @@ function updateCart() {
     if (cartBadge) {
         cartBadge.textContent = totalItems;
         cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
+    }
+    
+    // Обновляем счетчик в навигации
+    const cartCount = document.querySelector('.cart-count');
+    if (cartCount) {
+        cartCount.textContent = totalItems;
     }
     
     // Обновляем футер корзины
@@ -75,16 +288,41 @@ function updateCart() {
             checkoutBtn.disabled = true;
         }
     }
+}
+
+// Загрузка истории заказов
+async function loadOrders() {
+    const localStorageKey = `tutu_orders_${userId}`;
+    const savedOrders = localStorage.getItem(localStorageKey);
+    return savedOrders ? JSON.parse(savedOrders) : [];
+}
+
+// Сохранение заказа
+async function saveOrder(order) {
+    const orders = await loadOrders();
+    orders.push(order);
     
-    // Сохраняем в Telegram Cloud Storage (если доступно)
+    const localStorageKey = `tutu_orders_${userId}`;
+    localStorage.setItem(localStorageKey, JSON.stringify(orders));
+    
+    // Синхронизация с Telegram Cloud Storage
     if (tg.CloudStorage) {
-        tg.CloudStorage.setItem('cart', JSON.stringify(cart));
+        try {
+            await tg.CloudStorage.setItem('orders', JSON.stringify(orders));
+        } catch (error) {
+            console.log('Cloud storage save failed:', error);
+        }
     }
 }
 
 // Показать главный интерфейс
 function showMainInterface() {
     const app = document.getElementById('app');
+    
+    // Получаем URL аватарки пользователя
+    const userPhotoUrl = userData.photo_url || '';
+    const displayName = userData.first_name || 'Гость';
+    const username = userData.username ? `@${userData.username}` : '';
     
     app.innerHTML = `
         <!-- Header -->
@@ -100,7 +338,10 @@ function showMainInterface() {
                     </div>
                 </div>
                 <div class="user-avatar" onclick="showProfile()">
-                    <i class="fas fa-user"></i>
+                    ${userPhotoUrl ? 
+                        `<img src="${userPhotoUrl}" alt="Аватар" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : 
+                        `<i class="fas fa-user"></i>`
+                    }
                     <span class="cart-badge" style="display: none;">0</span>
                 </div>
             </div>
@@ -108,19 +349,19 @@ function showMainInterface() {
         
         <!-- Баннер -->
         <div class="banner fade-in" style="animation-delay: 0.1s">
-            <h2>🍵 Добро пожаловать, ${userData.first_name}!</h2>
+            <h2>🍵 Добро пожаловать, ${displayName}!</h2>
             <p>Аутентичный китайский чай с доставкой</p>
-            <a href="#" class="banner-button" onclick="showCatalog()">Смотреть каталог</a>
+            <a href="#" class="banner-button" onclick="showFullCatalog()">Смотреть каталог</a>
         </div>
         
         <!-- Навигация -->
         <div class="nav-grid fade-in" style="animation-delay: 0.2s">
-            <div class="nav-item" onclick="showCatalog()">
+            <div class="nav-item" onclick="showFullCatalog()">
                 <div class="nav-icon icon-tea">
                     <i class="fas fa-mug-hot"></i>
                 </div>
                 <h3>Каталог</h3>
-                <p>50+ сортов чая</p>
+                <p>${teaCatalog.length}+ сортов чая</p>
             </div>
             
             <div class="nav-item" onclick="showOrders()">
@@ -144,7 +385,7 @@ function showMainInterface() {
                     <i class="fas fa-user"></i>
                 </div>
                 <h3>Профиль</h3>
-                <p>Бонусы и скидки</p>
+                <p>${username || 'Ваш профиль'}</p>
             </div>
         </div>
         
@@ -173,32 +414,29 @@ function showMainInterface() {
         <div id="product-modal" class="modal"></div>
         <div id="order-modal" class="modal"></div>
         <div id="profile-modal" class="modal"></div>
+        <div id="catalog-modal" class="modal"></div>
     `;
     
-    // Загружаем товары
+    // Загружаем популярные товары
     loadPopularProducts();
     updateCart();
 }
 
 // Загрузка популярных товаров
 function loadPopularProducts() {
-    const products = [
-        { id: 1, name: 'Зеленый чай Лунцзин', price: 800, tag: 'Хит' },
-        { id: 2, name: 'Улун Те Гуань Инь', price: 1200, tag: 'Популярное' },
-        { id: 3, name: 'Пуэр Шу', price: 1500, tag: 'Премиум' },
-        { id: 4, name: 'Белый чай', price: 2200, tag: 'Элитный' }
-    ];
+    const popularTeas = teaCatalog.filter(tea => tea.tag);
     
     const container = document.getElementById('popular-products');
-    container.innerHTML = products.map(product => `
-        <div class="product-card" onclick="showProduct(${product.id})">
-            <div class="product-image ${product.id === 2 ? 'oolong' : product.id === 3 ? 'puer' : ''}">
-                ${product.tag ? `<div class="product-tag">${product.tag}</div>` : ''}
+    container.innerHTML = popularTeas.map(tea => `
+        <div class="product-card" onclick="showProduct(${tea.id})">
+            <div class="product-image ${getTeaTypeClass(tea.type)}">
+                ${tea.tag ? `<div class="product-tag">${tea.tag}</div>` : ''}
             </div>
             <div class="product-info">
-                <h3 class="product-name">${product.name}</h3>
-                <div class="product-price">${product.price}₽</div>
-                <button class="product-button" onclick="event.stopPropagation(); addToCart(${product.id})">
+                <h3 class="product-name">${tea.name}</h3>
+                <div class="product-subtitle">${tea.subtitle}</div>
+                <div class="product-price">${tea.price}₽</div>
+                <button class="product-button" onclick="event.stopPropagation(); addToCart(${tea.id})">
                     + В корзину
                 </button>
             </div>
@@ -206,23 +444,36 @@ function loadPopularProducts() {
     `).join('');
 }
 
+// Получение класса для типа чая
+function getTeaTypeClass(type) {
+    const classes = {
+        'Пуэр': 'puer',
+        'Красный чай': 'red-tea',
+        'Улун': 'oolong',
+        'Габа': 'gaba',
+        'Зеленый чай': 'green-tea'
+    };
+    return classes[type] || '';
+}
+
 // Добавление в корзину
 function addToCart(productId) {
-    const products = {
-        1: { id: 1, name: 'Зеленый чай Лунцзин', price: 800 },
-        2: { id: 2, name: 'Улун Те Гуань Инь', price: 1200 },
-        3: { id: 3, name: 'Пуэр Шу', price: 1500 },
-        4: { id: 4, name: 'Белый чай', price: 2200 }
-    };
-    
-    const product = products[productId];
+    const product = teaCatalog.find(p => p.id === productId);
     if (!product) return;
     
     const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
-        cart.push({ ...product, quantity: 1 });
+        cart.push({ 
+            ...product, 
+            quantity: 1,
+            // Сохраняем только нужные данные
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            type: product.type
+        });
     }
     
     saveCart();
@@ -232,24 +483,150 @@ function addToCart(productId) {
     tg.showAlert(`✅ ${product.name} добавлен в корзину!`);
 }
 
-// Показать каталог
-function showCatalog() {
-    tg.showAlert('Каталог чая скоро будет доступен!');
-    // Здесь можно реализовать полный каталог
-}
-
-// Показать заказы
-function showOrders() {
-    const modal = document.getElementById('order-modal');
+// Показать полный каталог
+function showFullCatalog() {
+    const modal = document.getElementById('catalog-modal');
+    
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-box"></i> Мои заказы</h3>
+                <h3><i class="fas fa-mug-hot"></i> Каталог чая</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    ${teaCatalog.map(tea => `
+                        <div class="catalog-item" onclick="showProduct(${tea.id})" style="padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.3s;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div class="tea-icon ${getTeaTypeClass(tea.type)}" style="width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; font-size: 16px;">${tea.name}</div>
+                                    <div style="font-size: 14px; color: #666; margin: 2px 0;">${tea.subtitle}</div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                                        <div style="color: #4CAF50; font-weight: 700;">${tea.price}₽</div>
+                                        <button onclick="event.stopPropagation(); addToCart(${tea.id})" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 15px; cursor: pointer; font-size: 14px;">
+                                            + Добавить
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Добавляем стили для иконок чая
+    const style = document.createElement('style');
+    style.textContent = `
+        .tea-icon.puer { background: linear-gradient(135deg, #8D6E63, #5D4037); }
+        .tea-icon.red-tea { background: linear-gradient(135deg, #FF5252, #D32F2F); }
+        .tea-icon.oolong { background: linear-gradient(135deg, #FFB74D, #F57C00); }
+        .tea-icon.gaba { background: linear-gradient(135deg, #7B1FA2, #4A148C); }
+        .tea-icon.green-tea { background: linear-gradient(135deg, #4CAF50, #2E7D32); }
+        .catalog-item:hover { background: #f8f9fa; }
+    `;
+    document.head.appendChild(style);
+    
+    modal.style.display = 'flex';
+}
+
+// Показать детальную информацию о товаре
+function showProduct(productId) {
+    const product = teaCatalog.find(p => p.id === productId);
+    if (!product) return;
+    
+    const modal = document.getElementById('product-modal');
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-leaf"></i> ${product.name}</h3>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
-                <p>Здесь будет история ваших заказов.</p>
-                <p>Функция в разработке...</p>
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-size: 18px; font-weight: 600;">${product.subtitle}</div>
+                        <div style="background: #4CAF50; color: white; padding: 5px 15px; border-radius: 15px; font-weight: 600;">
+                            ${product.type}
+                        </div>
+                    </div>
+                    ${product.tag ? `<div style="background: #FF9800; color: white; padding: 5px 10px; border-radius: 10px; display: inline-block; margin-bottom: 15px; font-size: 14px;">${product.tag}</div>` : ''}
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px; color: #333;">Описание:</h4>
+                    <p style="color: #666; line-height: 1.5;">${product.description}</p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px; color: #333;">🍶 Способ заваривания:</h4>
+                    <ul style="color: #666; padding-left: 20px; line-height: 1.6;">
+                        ${product.brewing.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h4 style="margin-bottom: 10px; color: #333;">🌿 Полезные свойства:</h4>
+                    <ul style="color: #666; padding-left: 20px; line-height: 1.6;">
+                        ${product.benefits.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #eee;">
+                    <div style="font-size: 24px; font-weight: 700; color: #4CAF50;">${product.price}₽</div>
+                    <button onclick="addToCart(${product.id}); closeModal();" style="padding: 12px 30px; background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; border: none; border-radius: 25px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-cart-plus"></i> Добавить в корзину
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
+
+// Показать заказы
+async function showOrders() {
+    const orders = await loadOrders();
+    const modal = document.getElementById('order-modal');
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-box"></i> История заказов</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                ${orders.length === 0 ? `
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 48px; color: #ddd; margin-bottom: 20px;">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <h4 style="color: #666; margin-bottom: 10px;">Заказов пока нет</h4>
+                        <p style="color: #999;">Совершите первую покупку!</p>
+                    </div>
+                ` : `
+                    <div style="max-height: 50vh; overflow-y: auto;">
+                        ${orders.map((order, index) => `
+                            <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <div style="font-weight: 600;">Заказ #${orders.length - index}</div>
+                                    <div style="color: #4CAF50; font-weight: 700;">${order.total}₽</div>
+                                </div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                                    ${new Date(order.timestamp).toLocaleDateString('ru-RU')}
+                                </div>
+                                <div style="font-size: 14px; color: #888;">
+                                    Товаров: ${order.cart.reduce((sum, item) => sum + item.quantity, 0)}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
             </div>
         </div>
     `;
@@ -273,26 +650,33 @@ function showCartModal() {
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
-                ${cart.map(item => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee;">
-                        <div>
-                            <div style="font-weight: 600;">${item.name}</div>
-                            <div style="font-size: 14px; color: #666;">${item.price}₽ × ${item.quantity}</div>
+                <div style="max-height: 40vh; overflow-y: auto; margin-bottom: 20px;">
+                    ${cart.map(item => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; margin-bottom: 5px;">${item.name}</div>
+                                <div style="font-size: 14px; color: #666;">${item.type} • ${item.price}₽/шт</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="display: flex; align-items: center; gap: 10px; background: white; padding: 5px 15px; border-radius: 20px;">
+                                    <button onclick="updateQuantity(${item.id}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+                                    <span style="font-weight: 600; min-width: 20px; text-align: center;">${item.quantity}</span>
+                                    <button onclick="updateQuantity(${item.id}, 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #4CAF50; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                                </div>
+                                <div style="font-weight: 700; color: #4CAF50; min-width: 60px; text-align: right;">
+                                    ${item.price * item.quantity}₽
+                                </div>
+                            </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <button onclick="updateQuantity(${item.id}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer;">-</button>
-                            <span>${item.quantity}</span>
-                            <button onclick="updateQuantity(${item.id}, 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #4CAF50; color: white; cursor: pointer;">+</button>
-                        </div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </div>
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #4CAF50;">
-                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700;">
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 15px;">
                         <span>Итого:</span>
                         <span>${total}₽</span>
                     </div>
-                    <button onclick="checkout()" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    <button onclick="checkout()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
                         <i class="fas fa-paper-plane"></i> Оформить заказ
                     </button>
                 </div>
@@ -323,35 +707,53 @@ function updateQuantity(productId, delta) {
 }
 
 // Оформление заказа
-function checkout() {
+async function checkout() {
     if (cart.length === 0) {
         tg.showAlert('Добавьте товары в корзину');
         return;
     }
     
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const order = {
+        id: Date.now(),
+        user_id: userId,
+        user_name: userData.first_name || 'Гость',
+        cart: [...cart],
+        total: total,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Сохраняем заказ
+    await saveOrder(order);
     
     // Отправляем данные в бота
     tg.sendData(JSON.stringify({
         action: 'checkout',
-        user_id: userData.id,
-        user_name: userData.first_name,
+        user_id: userData.id || userId,
+        user_name: userData.first_name || 'Гость',
+        user_username: userData.username || '',
         cart: cart,
         total: total,
-        timestamp: new Date().toISOString()
+        order_id: order.id,
+        timestamp: order.timestamp
     }));
-    
-    tg.showAlert(`✅ Заказ на ${total}₽ отправлен! С вами свяжется менеджер.`);
     
     // Очищаем корзину
     cart = [];
-    saveCart();
+    await saveCart();
+    
+    tg.showAlert(`✅ Заказ #${order.id} на ${total}₽ отправлен! С вами свяжется менеджер.`);
     closeModal();
 }
 
 // Показать профиль
 function showProfile() {
     const modal = document.getElementById('profile-modal');
+    const userPhotoUrl = userData.photo_url || '';
+    const firstName = userData.first_name || 'Гость';
+    const lastName = userData.last_name || '';
+    const username = userData.username ? `@${userData.username}` : '';
+    const fullName = `${firstName} ${lastName}`.trim();
     
     modal.innerHTML = `
         <div class="modal-content">
@@ -360,31 +762,59 @@ function showProfile() {
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="width: 80px; height: 80px; margin: 0 auto 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; color: white;">
-                        ${userData.first_name ? userData.first_name.charAt(0) : 'Г'}
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <div style="width: 100px; height: 100px; margin: 0 auto 15px; background: ${userPhotoUrl ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${userPhotoUrl ? 'inherit' : '42px'}; color: white; overflow: hidden; border: 3px solid #4CAF50;">
+                        ${userPhotoUrl ? 
+                            `<img src="${userPhotoUrl}" alt="Аватар" style="width: 100%; height: 100%; object-fit: cover;">` : 
+                            `${firstName.charAt(0)}`
+                        }
                     </div>
-                    <h3>${userData.first_name || 'Гость'}</h3>
-                    ${userData.id ? `<p style="color: #666; font-size: 14px;">ID: ${userData.id}</p>` : ''}
+                    <h3 style="margin-bottom: 5px;">${fullName}</h3>
+                    ${username ? `<p style="color: #666; font-size: 16px;">${username}</p>` : ''}
+                    ${userData.id ? `<p style="color: #999; font-size: 14px; margin-top: 5px;">ID: ${userData.id}</p>` : ''}
                 </div>
                 
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>Бонусные баллы:</span>
-                        <span style="font-weight: 700; color: #4CAF50;">150</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Заказов всего:</span>
-                        <span style="font-weight: 700;">2</span>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 25px;">
+                    <h4 style="margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-info-circle"></i> Информация
+                    </h4>
+                    <div style="color: #666; line-height: 1.6;">
+                        <p style="margin-bottom: 10px;">📱 Вы используете ${tg.isExpanded ? 'развернутый' : 'компактный'} режим Telegram Web App</p>
+                        <p>🔄 Все ваши данные синхронизируются между устройствами</p>
                     </div>
                 </div>
                 
-                <button onclick="openChannel()" style="width: 100%; padding: 12px; margin-bottom: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
-                    <i class="fab fa-telegram"></i> Наш канал
-                </button>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 25px;">
+                    <h4 style="margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-headset"></i> Контакты поддержки
+                    </h4>
+                    <div style="color: #666; line-height: 1.6;">
+                        <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 10px;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">Telegram:</div>
+                            <a href="https://t.me/ivan_likhov" target="_blank" style="color: #4CAF50; text-decoration: none;">@ivan_likhov</a>
+                        </div>
+                        <div style="padding: 10px; background: white; border-radius: 10px;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">Телефон:</div>
+                            <a href="tel:+79038394670" style="color: #4CAF50; text-decoration: none;">+7 (903) 839-46-70</a>
+                        </div>
+                    </div>
+                </div>
                 
-                <button onclick="showSupport()" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
-                    <i class="fas fa-headset"></i> Поддержка
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 15px;">
+                    <h4 style="margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-clock"></i> Часы работы
+                    </h4>
+                    <div style="color: #666;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>Понедельник - Воскресенье:</span>
+                            <span style="font-weight: 600;">09:00 - 21:00</span>
+                        </div>
+                        <p style="margin-top: 10px; font-size: 14px; color: #888;">Принимаем заказы 24/7</p>
+                    </div>
+                </div>
+                
+                <button onclick="openChannel()" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <i class="fab fa-telegram"></i> Наш телеграм-канал
                 </button>
             </div>
         </div>
@@ -397,14 +827,6 @@ function openChannel() {
     tg.openLink('https://t.me/teatea_bar');
 }
 
-// Поддержка
-function showSupport() {
-    tg.showAlert('📞 Служба поддержки:\n\n' +
-                 'Telegram: @teatea_bar\n' +
-                 'Email: support@teatea.ru\n' +
-                 'Часы работы: 10:00-20:00');
-}
-
 // Закрыть модальное окно
 function closeModal() {
     document.querySelectorAll('.modal').forEach(modal => {
@@ -412,9 +834,9 @@ function closeModal() {
     });
 }
 
-// Показать товар
-function showProduct(productId) {
-    tg.showAlert('Детальная информация о товаре скоро будет доступна!');
+// Показать каталог (старая функция для обратной совместимости)
+function showCatalog() {
+    showFullCatalog();
 }
 
 // Обработчики Telegram событий
