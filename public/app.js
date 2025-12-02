@@ -10,43 +10,88 @@ let popularity = {}; // { teaId: count }
 
 // Небольшая util-функция sleep
 function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
+// Показывать сообщение в статусе загрузчика (если элемент есть)
+function showLoaderMessage(text) {
+    const status = document.getElementById('loader-status');
+    if (status) status.textContent = text;
+    console.log('[LOADER]', text);
+}
+
+// Глобальный обработчик ошибок — чтобы не падал silently
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error('Global error caught:', message, 'at', source + ':' + lineno + ':' + colno, error);
+    try {
+        showLoaderMessage('Ошибка: ' + (message || 'unknown') + '. Смотрите консоль.');
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.opacity = '0.95';
+        const app = document.getElementById('app');
+        if (app) app.style.display = 'block';
+    } catch(e){}
+    // возвращаем false, чтобы браузер также показывал ошибку
+    return false;
+};
 
 // Инициализация приложения
+// Надёжная инициализация приложения (замените существующую функцию initApp)
 async function initApp() {
-    // Если tg не определён при парсинге — перехватим его здесь
-    if (!tg && window.Telegram && window.Telegram.WebApp) tg = window.Telegram.WebApp;
-    if (tg) {
-        try { tg.ready(); } catch(e){ console.warn('tg.ready() error', e); }
-        try { tg.expand(); } catch(e){ /* ignore */ }
-        try { tg.setHeaderColor && tg.setHeaderColor('#4CAF50'); } catch(e){}
-        try { tg.setBackgroundColor && tg.setBackgroundColor('#f0f4f7'); } catch(e){}
-    }
+    try {
+        showLoaderMessage('Инициализация приложения...');
 
-    // Получаем данные пользователя (будет пытаться несколько раз если нужно)
-    userData = await getUserData();
-    isTelegramUser = !!(userData && userData.id);
-    userId = generateUserId();
+        // Подхватываем Telegram.WebApp, если он появился поздно
+        if (!tg && window.Telegram && window.Telegram.WebApp) tg = window.Telegram.WebApp;
 
-    // Загружаем сохранённую популярность (по заказам)
-    await loadPopularity();
+        if (tg) {
+            try { tg.ready(); } catch(e){ console.warn('tg.ready() error', e); }
+            try { tg.expand(); } catch(e){ /* ignore */ }
+            try { tg.setHeaderColor && tg.setHeaderColor('#4CAF50'); } catch(e){}
+            try { tg.setBackgroundColor && tg.setBackgroundColor('#f0f4f7'); } catch(e){}
+            showLoaderMessage('Telegram WebApp инициализирован...');
+        } else {
+            showLoaderMessage('Не обнаружен Telegram WebApp — работаем в гостевом режиме');
+        }
 
-    // Загружаем корзину и заказы
-    await loadCart();
-    await loadOrders();
+        // Получаем данные пользователя (возвращает объект даже для гостя)
+        userData = await getUserData();
+        showLoaderMessage(`Пользователь: ${userData.first_name || 'Гость'}`);
 
-    showMainInterface();
+        // Генерация ID
+        userId = generateUserId();
 
-    // Скрываем загрузчик и показываем приложение
-    setTimeout(() => {
-        const loader = document.getElementById('loader');
-        if (loader) loader.style.opacity = '0';
+        // Загружаем popularity/корзину/заказы
+        showLoaderMessage('Загружаем настройки и корзину...');
+        await loadPopularity();
+        await loadCart();
+        await loadOrders();
+
+        // Показываем интерфейс (все возможные ошибки внутри showMainInterface будут пойманы ниже)
+        showMainInterface();
+
+        // Если всё прошло — скрываем загрузчик через небольшой таймаут чтобы увидеть UI
         setTimeout(() => {
-            if (loader) loader.style.display = 'none';
-            const app = document.getElementById('app');
-            if (app) app.style.display = 'block';
-        }, 500);
-    }, 800);
+            const loader = document.getElementById('loader');
+            if (loader) loader.style.opacity = '0';
+            setTimeout(() => {
+                if (loader) loader.style.display = 'none';
+                const app = document.getElementById('app');
+                if (app) app.style.display = 'block';
+            }, 450);
+        }, 400);
+
+    } catch (err) {
+        console.error('initApp error', err);
+        // Показываем пользователю понятную ошибку в загрузчике и открываем app, чтобы можно было смотреть консоль
+        showLoaderMessage('Произошла ошибка при запуске. Откройте консоль (F12) для деталей.');
+        const loader = document.getElementById('loader');
+        if (loader) {
+            // оставим loader видимым, но полупрозрачным, чтобы пользователь понял что случилось
+            loader.style.opacity = '0.95';
+        }
+        // Показываем блок app (чтобы можно было взаимодействовать) — но не скрываем loader полностью
+        const app = document.getElementById('app');
+        if (app) app.style.display = 'block';
+    }
 }
+
 
 // Надёжное получение initData (несколько попыток)
 async function getUserData() {
