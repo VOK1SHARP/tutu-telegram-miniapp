@@ -3,130 +3,6 @@ let tg = window.Telegram.WebApp;
 let cart = [];
 let userData = null;
 
-// Полный каталог чаев "ТИ•ТИ"
-const teaCatalog = [
-    {
-        id: 1,
-        name: 'ЛАО ЧА ТОУ «Старые чайные головы»',
-        description: 'Пуэр. Насыщенный и бархатистый. Настой — густой, тёмно-коричневый с рубиновыми отблесками. Во вкусе преобладают тёплые ноты ореха, карамели, сухофруктов и лёгкой древесной горчинки. Послевкусие долгое, с приятными сладковатыми и пряными оттенками.',
-        price: 1200,
-        category: 'puer',
-        weight: '100г',
-        tags: ['Пуэр', 'Хит'],
-        brewing: '5 гр чая на 500 мл воды, температура 95°C+, время 3-5 минут',
-        properties: 'Антиоксидант, укрепляет сердце и сосуды, укрепляет иммунитет, придает энергию',
-        imageClass: 'puer-1'
-    },
-    {
-        id: 2,
-        name: 'ХЭЙ ЦЗИНЬ «Черное золото»',
-        description: 'Красный чай. Аромат сладости пронизывает тело, становясь его основной нотой, окруженной едва заметным пряно-древесным ореолом. Настой гладкий, сладкий, приятный, с едва заметной кислинкой. Послевкусие тонкое, карамельное, в нем различаются оттенки ванили.',
-        price: 950,
-        category: 'red',
-        weight: '50г',
-        tags: ['Красный чай', 'Новинка'],
-        brewing: 'Проливами: 5-8 гр на 150-200 мл воды, 85-95°C, первый пролив слить. Настаиванием: 5 гр на 500 мл воды, 3-5 минут',
-        properties: 'Согревает, снимает усталость, помогает при простуде, улучшает память',
-        imageClass: 'red-1'
-    },
-    {
-        id: 3,
-        name: 'ЖОУ ГУЙ НУН СЯН «Мясистая корица»',
-        description: 'Улун. Чай для концентрации, погружения, имеет приятный ярко выраженный топленый вкус с ореховыми нотками, приятный аромат, согревает и успокаивает. Отличный баланс вкуса и аромата. Табачные, медовые и фруктово-цитрусовые нотки.',
-        price: 1100,
-        category: 'oolong',
-        weight: '50г',
-        tags: ['Улун', 'Для концентрации'],
-        brewing: 'Проливами: 5-8 гр на 150-200 мл воды, 80-90°C. Настаиванием: 5 гр на 500 мл воды, 3-5 минут',
-        properties: 'Стимулирует обмен веществ, снижает холестерин, успокаивает нервную систему, улучшает память',
-        imageClass: 'oolong-1'
-    },
-    {
-        id: 4,
-        name: 'ДЯНЬ ХУН «Красный чай из Юньнани»',
-        description: 'Красный чай. Теплый, хлебно-медовый аромат. Вкус прямой и насыщенный, мягкая сладость, небольшая терпкость и приятная плотность в чашке. Легко бодрит и отлично подходит как повседневный, рабочий чай для любого времени суток.',
-        price: 850,
-        category: 'red',
-        weight: '50г',
-        tags: ['Красный чай', 'Повседневный'],
-        brewing: 'Проливами: 5-8 гр на 150-200 мл воды, 85-95°C. Настаиванием: 5 гр на 500 мл воды, 3-5 минут',
-        properties: 'Согревает, снимает усталость, помогает при простуде, улучшает память',
-        imageClass: 'red-2'
-    },
-    {
-        id: 5,
-        name: 'ГАБА МАО ЧА «Чай-сырец»',
-        description: 'Габа. В аромате жареные семечки, кедровые орехи переходящие в свежий мёд. Во вкусе кешью, кедровые орешки, нота вишневой косточки с неяркой кислинкой.',
-        price: 1300,
-        category: 'gaba',
-        weight: '50г',
-        tags: ['Габа', 'Эксклюзив'],
-        brewing: 'Проливами: 5-8 гр на 150-200 мл воды, 85°C. Настаиванием: 5 гр на 500 мл воды, 3-5 минут',
-        properties: 'Укрепляет сосуды, улучшает пищеварение, снимает головные боли, способствует похудению',
-        imageClass: 'gaba-1'
-    },
-    {
-        id: 6,
-        name: 'ГУ ШУ ХУН ЧА «Красный чай со старых деревьев»',
-        description: 'Красный чай. Насыщенные медово-сливовые оттенки, небольшая маслянистость, абрикосовая легкая косточка на послевкусии, сладкий.',
-        price: 1400,
-        category: 'red',
-        weight: '50г',
-        tags: ['Красный чай', 'Премиум'],
-        brewing: 'Проливами: 5-8 гр на 150-200 мл воды, 85-90°C. Настаиванием: 5 гр на 500 мл воды, 3-5 минут',
-        properties: 'Согревает, снимает усталость, помогает при простуде, улучшает память',
-        imageClass: 'red-3'
-    },
-    {
-        id: 7,
-        name: 'ТЕ ГУАНЬ ИНЬ «Железная богиня милосердия»',
-        description: 'Улун. Классический южнофуцзяньский расслабляющий светлый улун с интересной и многогранной лугово-травной и цветочной вкусоароматикой, а также яркой сиреневой кислинкой на послевкусии. Хорошо расслабляет, отлично подойдет для посиделок в компании близких людей.',
-        price: 1050,
-        category: 'oolong',
-        weight: '50г',
-        tags: ['Улун', 'Классика'],
-        brewing: 'Проливами: 5-8 гр на 150-200 мл воды, 85°C. Настаинванием: 5 гр на 500 мл воды, 3-5 минут',
-        properties: 'Антиоксиданты, профилактика заболеваний зубов, полезен для сердца, снимает тревожность',
-        imageClass: 'oolong-2'
-    },
-    {
-        id: 8,
-        name: 'МО ЛИ ХУА ЧА «Жасмин»',
-        description: 'Зеленый чай. Свежий жасминовый аромат с нежными цветочными оттенками, вкус сбалансированный и приятный. Оставляет тёплое, запоминающее послевкусие. Для любителей жасмина отличный вариант для старта дня на постоянной основе.',
-        price: 900,
-        category: 'green',
-        weight: '50г',
-        tags: ['Зеленый чай', 'Утренний'],
-        brewing: 'Проливами: 5-8 гр на 150-200 мл воды, 70°C. Настаиванием: 5 гр на 500 мл воды, 3-5 минут',
-        properties: 'Снимает стресс, способствует похудению, выводит токсины, тонизирует и бодрит',
-        imageClass: 'green-1'
-    },
-    {
-        id: 9,
-        name: 'ЛУН ЦЗИН «Колодец дракона»',
-        description: 'Зеленый чай премиум класса. Нежные почки с серебристым ворсом. Аромат свежей зелени с цветочными нотками. Вкус мягкий, сладковатый с ореховыми оттенками и долгим послевкусием. Императорский чай.',
-        price: 1800,
-        category: 'green',
-        weight: '30г',
-        tags: ['Зеленый чай', 'Элитный'],
-        brewing: '3-4 гр на 150 мл воды, температура 75-80°C, время 2-3 минуты',
-        properties: 'Антиоксидант, улучшает метаболизм, снижает давление, улучшает концентрацию',
-        imageClass: 'green-2'
-    },
-    {
-        id: 10,
-        name: 'ШУ ПУЭР «Приготовленный пуэр»',
-        description: 'Выдержанный пуэр темной ферментации. Землистый аромат с нотами ореха, сухофруктов и древесины. Вкус насыщенный, бархатистый, без горечи. Идеален после еды.',
-        price: 1600,
-        category: 'puer',
-        weight: '100г',
-        tags: ['Пуэр', 'После еды'],
-        brewing: '5 гр на 150 мл воды, температура 95-100°C, первый пролив 10 секунд',
-        properties: 'Снижает холестерин, помогает пищеварению, выводит токсины, согревает',
-        imageClass: 'puer-2'
-    }
-];
-
 // Функция для отладки
 function debugLog(message, data = null) {
     console.log(`[DEBUG] ${message}`, data || '');
@@ -177,7 +53,21 @@ function initApp() {
         }, 500);
     }, 1000);
 }
-
+// Добавьте service worker для офлайн-работы
+// service-worker.js
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open('teashop-v1').then(cache => {
+            return cache.addAll([
+                '/',
+                '/index.html',
+                '/style.css',
+                '/app.js',
+                '/manifest.json'
+            ]);
+        })
+    );
+});
 // Получение данных пользователя из Telegram
 function getUserDataFromTelegram(initData) {
     let user = null;
@@ -277,7 +167,51 @@ function initializeTestMode() {
         }, 500);
     }, 1000);
 }
+// Добавьте в app.js:
+const teaCatalog = [
+    {
+        id: 1,
+        name: 'Зеленый чай Лунцзин',
+        description: 'Элитный зеленый чай с нежным ароматом',
+        price: 800,
+        category: 'green',
+        weight: '50г',
+        tags: ['Хит', 'Популярное'],
+        image: 'green-tea.jpg'
+    },
+    // ... остальные товары
+];
 
+function showProductDetails(productId) {
+    const product = teaCatalog.find(p => p.id === productId);
+    const modal = document.getElementById('product-modal');
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${product.name}</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="product-detail-image" style="background: #4CAF50; height: 200px; border-radius: 10px; margin-bottom: 15px;"></div>
+                <p>${product.description}</p>
+                <p><strong>Вес:</strong> ${product.weight}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <div class="product-price">${product.price}₽</div>
+                    <div>
+                        <button onclick="updateQuantity(${product.id}, -1)" style="padding: 8px 15px; background: #f0f0f0; border: none; border-radius: 5px; cursor: pointer;">-</button>
+                        <span style="margin: 0 10px;" id="quantity-${product.id}">1</span>
+                        <button onclick="updateQuantity(${product.id}, 1)" style="padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">+</button>
+                    </div>
+                </div>
+                <button onclick="addToCart(${product.id})" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    Добавить в корзину
+                </button>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
 // Сохраняем пользователя в localStorage
 function saveUserToStorage(user) {
     const userStorage = {
@@ -343,12 +277,6 @@ function updateCart() {
         cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
     }
     
-    // Обновляем счетчик в навигации
-    const cartCountElements = document.querySelectorAll('.cart-count');
-    cartCountElements.forEach(el => {
-        el.textContent = totalItems;
-    });
-    
     // Обновляем футер корзины
     const cartTotal = document.getElementById('cart-total');
     const checkoutBtn = document.getElementById('checkout-btn');
@@ -400,7 +328,6 @@ function showMainInterface() {
                 </div>
                 <div class="user-avatar" onclick="showProfile()">
                     ${userAvatar}
-                    <div class="cart-badge" style="display: none; position: absolute; top: -5px; right: -5px; background: #FF5252; color: white; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; align-items: center; justify-content: center;">0</div>
                 </div>
             </div>
         </div>
@@ -419,7 +346,7 @@ function showMainInterface() {
                     <i class="fas fa-mug-hot"></i>
                 </div>
                 <h3>Каталог</h3>
-                <p>10+ сортов чая</p>
+                <p>50+ сортов чая</p>
             </div>
             
             <div class="nav-item" onclick="showOrders()">
@@ -473,8 +400,6 @@ function showMainInterface() {
         <div id="order-modal" class="modal"></div>
         <div id="profile-modal" class="modal"></div>
         <div id="checkout-modal" class="modal"></div>
-        <div id="debug-modal" class="modal"></div>
-        <div id="catalog-modal" class="modal"></div>
     `;
     
     // Кнопка для отладки (только в разработке)
@@ -518,11 +443,6 @@ function showDebugInfo() {
 ${JSON.stringify(userData, null, 2)}
                 </pre>
                 
-                <h4>Корзина:</h4>
-                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow: auto; max-height: 150px;">
-${JSON.stringify(cart, null, 2)}
-                </pre>
-                
                 <h4 style="margin-top: 20px;">Telegram WebApp:</h4>
                 <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow: auto; max-height: 100px;">
 ${JSON.stringify({
@@ -540,22 +460,24 @@ ${JSON.stringify({
 
 // Загрузка популярных товаров
 function loadPopularProducts() {
+    const products = [
+        { id: 1, name: 'Зеленый чай Лунцзин', price: 800, tag: 'Хит' },
+        { id: 2, name: 'Улун Те Гуань Инь', price: 1200, tag: 'Популярное' },
+        { id: 3, name: 'Пуэр Шу', price: 1500, tag: 'Премиум' },
+        { id: 4, name: 'Белый чай', price: 2200, tag: 'Элитный' }
+    ];
+    
     const container = document.getElementById('popular-products');
     if (!container) return;
     
-    // Берем первые 4 товара из каталога как популярные
-    const popularProducts = teaCatalog.slice(0, 4);
-    
-    container.innerHTML = popularProducts.map(product => `
-        <div class="product-card" onclick="showProductDetails(${product.id})">
-            <div class="product-image ${product.imageClass}">
-                ${product.tags && product.tags.length > 0 ? 
-                    `<div class="product-tag">${product.tags[0]}</div>` : ''}
+    container.innerHTML = products.map(product => `
+        <div class="product-card" onclick="showProduct(${product.id})">
+            <div class="product-image ${product.id === 2 ? 'oolong' : product.id === 3 ? 'puer' : ''}">
+                ${product.tag ? `<div class="product-tag">${product.tag}</div>` : ''}
             </div>
             <div class="product-info">
-                <h3 class="product-name">${truncateText(product.name, 25)}</h3>
+                <h3 class="product-name">${product.name}</h3>
                 <div class="product-price">${product.price}₽</div>
-                <div class="product-weight">${product.weight}</div>
                 <button class="product-button" onclick="event.stopPropagation(); addToCart(${product.id})">
                     + В корзину
                 </button>
@@ -564,109 +486,23 @@ function loadPopularProducts() {
     `).join('');
 }
 
-// Обрезать текст
-function truncateText(text, maxLength) {
-    if (text.length <= maxLength) return text;
-    return text.substr(0, maxLength) + '...';
-}
-
-// Показать детали товара
-function showProductDetails(productId) {
-    const product = teaCatalog.find(p => p.id === productId);
-    if (!product) return;
-    
-    const modal = document.getElementById('product-modal');
-    
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 500px;">
-            <div class="modal-header">
-                <h3><i class="fas fa-mug-hot"></i> ${product.name}</h3>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="product-detail-image ${product.imageClass}" style="height: 200px; border-radius: 10px; margin-bottom: 15px; position: relative; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    ${product.tags && product.tags.length > 0 ? 
-                        `<div class="product-tag">${product.tags[0]}</div>` : ''}
-                    <div style="position: absolute; bottom: 10px; left: 10px; color: white; font-size: 14px; background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 5px;">${product.weight}</div>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #4CAF50; margin-bottom: 10px;">Описание:</h4>
-                    <p style="margin-bottom: 15px; line-height: 1.5;">${product.description}</p>
-                </div>
-                
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="color: #2196F3; margin-bottom: 8px; font-size: 16px;">🍶 Способ заваривания:</h4>
-                    <p style="margin: 0; font-size: 14px;">${product.brewing}</p>
-                </div>
-                
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <h4 style="color: #2196F3; margin-bottom: 8px; font-size: 16px;">🌿 Полезные свойства:</h4>
-                    <p style="margin: 0; font-size: 14px;">${product.properties}</p>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <div style="display: flex; flex-direction: column;">
-                        <div class="product-price" style="font-size: 28px; font-weight: 700; color: #4CAF50;">${product.price}₽</div>
-                        <div style="font-size: 14px; color: #666;">${product.weight}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <button onclick="updateCartQuantity(${product.id}, -1)" style="padding: 10px 15px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">-</button>
-                        <span style="font-size: 18px; font-weight: 600; min-width: 30px; text-align: center;" id="detail-quantity-${product.id}">1</span>
-                        <button onclick="updateCartQuantity(${product.id}, 1)" style="padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">+</button>
-                    </div>
-                </div>
-                
-                <button onclick="addToCart(${product.id}, parseInt(document.getElementById('detail-quantity-${product.id}').textContent))" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
-                    <i class="fas fa-cart-plus"></i> Добавить в корзину
-                </button>
-            </div>
-        </div>
-    `;
-    modal.style.display = 'flex';
-}
-
-function getCategoryName(category) {
-    const categories = {
-        'green': 'Зеленый чай',
-        'oolong': 'Улун',
-        'puer': 'Пуэр',
-        'red': 'Красный чай',
-        'gaba': 'Габа',
-        'white': 'Белый чай',
-        'yellow': 'Желтый чай'
+// Добавление в корзину
+function addToCart(productId) {
+    const products = {
+        1: { id: 1, name: 'Зеленый чай Лунцзин', price: 800 },
+        2: { id: 2, name: 'Улун Те Гуань Инь', price: 1200 },
+        3: { id: 3, name: 'Пуэр Шу', price: 1500 },
+        4: { id: 4, name: 'Белый чай', price: 2200 }
     };
-    return categories[category] || 'Чай';
-}
-
-// Обновить количество в модальном окне товара
-function updateCartQuantity(productId, delta) {
-    const quantityElement = document.getElementById(`detail-quantity-${productId}`);
-    if (!quantityElement) return;
     
-    let quantity = parseInt(quantityElement.textContent) + delta;
-    if (quantity < 1) quantity = 1;
-    if (quantity > 99) quantity = 99;
-    
-    quantityElement.textContent = quantity;
-}
-
-// Добавление в корзину с количеством
-function addToCart(productId, quantity = 1) {
-    const product = teaCatalog.find(p => p.id === productId);
+    const product = products[productId];
     if (!product) return;
     
     const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
-        existingItem.quantity += quantity;
+        existingItem.quantity += 1;
     } else {
-        cart.push({ 
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            weight: product.weight,
-            quantity: quantity 
-        });
+        cart.push({ ...product, quantity: 1 });
     }
     
     saveCart();
@@ -675,76 +511,12 @@ function addToCart(productId, quantity = 1) {
     if (tg && tg.HapticFeedback) {
         tg.HapticFeedback.impactOccurred('light');
     }
-    
-    // Показываем уведомление
-    const message = quantity > 1 ? 
-        `✅ ${product.name} (${quantity} шт.) добавлен в корзину!` :
-        `✅ ${product.name} добавлен в корзину!`;
-    
-    if (tg.showAlert) {
-        tg.showAlert(message);
-    }
-    
-    // Закрываем модальное окно товара
-    closeModal();
+    tg.showAlert(`✅ ${product.name} добавлен в корзину!`);
 }
 
 // Показать каталог
 function showCatalog() {
-    const modal = document.getElementById('catalog-modal');
-    
-    const categories = {
-        'puer': 'Пуэры',
-        'red': 'Красные чаи',
-        'oolong': 'Улуны',
-        'green': 'Зеленые чаи',
-        'gaba': 'Габа'
-    };
-    
-    let catalogHTML = '';
-    
-    // Показываем все товары по категориям
-    Object.entries(categories).forEach(([categoryId, categoryName]) => {
-        const categoryProducts = teaCatalog.filter(p => p.category === categoryId);
-        
-        if (categoryProducts.length > 0) {
-            catalogHTML += `
-                <div class="catalog-category" style="margin-bottom: 25px;">
-                    <h3 style="margin-bottom: 15px; color: #4CAF50; font-size: 20px; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">${categoryName}</h3>
-                    <div class="catalog-products" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
-                        ${categoryProducts.map(product => `
-                            <div class="catalog-item" onclick="showProductDetails(${product.id})" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.3s;">
-                                <div class="catalog-item-image ${product.imageClass}" style="height: 100px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;">
-                                    ${product.tags && product.tags.length > 0 ? 
-                                        `<div style="position: absolute; top: 5px; right: 5px; background: #FF5252; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600;">${product.tags[0]}</div>` : ''}
-                                </div>
-                                <div class="catalog-item-info" style="padding: 10px;">
-                                    <div style="font-weight: 600; margin-bottom: 5px; font-size: 14px; line-height: 1.3;">${truncateText(product.name, 30)}</div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                                        <div style="color: #4CAF50; font-weight: 700; font-size: 16px;">${product.price}₽</div>
-                                        <div style="font-size: 11px; color: #666; background: #f0f0f0; padding: 2px 6px; border-radius: 10px;">${product.weight}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-    });
-    
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 500px; max-height: 80vh;">
-            <div class="modal-header">
-                <h3><i class="fas fa-list"></i> Каталог чая ТИ•ТИ</h3>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding: 20px;">
-                ${catalogHTML || '<p style="text-align: center; color: #666;">Каталог временно пуст</p>'}
-            </div>
-        </div>
-    `;
-    modal.style.display = 'flex';
+    tg.showAlert('Каталог чая скоро будет доступен!');
 }
 
 // Показать заказы
@@ -757,29 +529,26 @@ function showOrders() {
     let ordersHTML = '';
     if (orderHistory.length > 0) {
         ordersHTML = orderHistory.map((order, index) => `
-            <div class="order-history-item" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                <div class="order-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-                    <span style="font-weight: 600; color: #333;">Заказ #${order.id.toString().substr(-6)}</span>
-                    <span style="font-size: 14px; color: #666;">${new Date(order.date).toLocaleDateString('ru-RU')}</span>
+            <div class="order-history-item">
+                <div class="order-header">
+                    <span>Заказ #${index + 1}</span>
+                    <span>${new Date(order.date).toLocaleDateString()}</span>
                 </div>
-                <div class="order-items" style="margin-bottom: 10px;">
+                <div class="order-items">
                     ${order.items.map(item => `
-                        <div class="order-item" style="display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px;">
-                            <span style="color: #555;">${item.name}</span>
-                            <span style="font-weight: 600; color: #333;">${item.quantity} × ${item.price}₽</span>
+                        <div class="order-item">
+                            <span>${item.name}</span>
+                            <span>${item.quantity} × ${item.price}₽</span>
                         </div>
                     `).join('')}
                 </div>
-                <div class="order-total" style="text-align: right; font-size: 16px; padding-top: 10px; border-top: 1px solid #eee; color: #333; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        Статус: <span style="color: ${order.status === 'completed' ? '#4CAF50' : order.status === 'pending' ? '#FF9800' : '#F44336'}; font-weight: 600;">${getStatusText(order.status)}</span>
-                    </div>
-                    <strong>${order.total}₽</strong>
+                <div class="order-total">
+                    Итого: <strong>${order.total}₽</strong>
                 </div>
             </div>
         `).join('');
     } else {
-        ordersHTML = '<div style="text-align: center; padding: 40px 20px; color: #666;"><i class="fas fa-box-open" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i><p>У вас пока нет заказов</p></div>';
+        ordersHTML = '<p style="text-align: center; padding: 20px;">У вас пока нет заказов</p>';
     }
     
     modal.innerHTML = `
@@ -796,23 +565,10 @@ function showOrders() {
     modal.style.display = 'flex';
 }
 
-function getStatusText(status) {
-    const statuses = {
-        'pending': 'В обработке',
-        'confirmed': 'Подтвержден',
-        'shipped': 'Отправлен',
-        'completed': 'Завершен',
-        'cancelled': 'Отменен'
-    };
-    return statuses[status] || status;
-}
-
 // Показать корзину
 function showCartModal() {
     if (cart.length === 0) {
-        if (tg.showAlert) {
-            tg.showAlert('🛒 Корзина пуста');
-        }
+        tg.showAlert('🛒 Корзина пуста');
         return;
     }
     
@@ -828,25 +584,24 @@ function showCartModal() {
             <div class="modal-body">
                 ${cart.map(item => `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: 600; margin-bottom: 5px;">${item.name}</div>
-                            <div style="font-size: 12px; color: #666; margin-bottom: 3px;">${item.weight || ''}</div>
+                        <div>
+                            <div style="font-weight: 600;">${item.name}</div>
                             <div style="font-size: 14px; color: #666;">${item.price}₽ × ${item.quantity}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <button onclick="updateQuantity(${item.id}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
-                            <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
-                            <button onclick="updateQuantity(${item.id}, 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #4CAF50; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                            <button onclick="updateQuantity(${item.id}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer;">-</button>
+                            <span>${item.quantity}</span>
+                            <button onclick="updateQuantity(${item.id}, 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #4CAF50; color: white; cursor: pointer;">+</button>
                         </div>
                     </div>
                 `).join('')}
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #4CAF50;">
-                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700;">
                         <span>Итого:</span>
                         <span>${total}₽</span>
                     </div>
-                    <button onclick="processCheckout()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
+                    <button onclick="processCheckout()" style="width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-paper-plane"></i> Оформить заказ
                     </button>
                 </div>
@@ -882,9 +637,7 @@ function updateQuantity(productId, delta) {
 // Процесс оформления заказа
 function processCheckout() {
     if (cart.length === 0) {
-        if (tg.showAlert) {
-            tg.showAlert('Добавьте товары в корзину');
-        }
+        tg.showAlert('Добавьте товары в корзину');
         return;
     }
     
@@ -917,10 +670,10 @@ function processCheckout() {
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <button onclick="confirmCheckout()" style="padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
+                    <button onclick="confirmCheckout()" style="padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-check"></i> Подтвердить
                     </button>
-                    <button onclick="closeModal()" style="padding: 15px; background: #f0f0f0; color: #333; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
+                    <button onclick="closeModal()" style="padding: 15px; background: #f0f0f0; color: #333; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-times"></i> Отмена
                     </button>
                 </div>
@@ -978,9 +731,7 @@ function confirmCheckout() {
     closeModal();
     
     // Показываем подтверждение
-    if (tg.showAlert) {
-        tg.showAlert(`✅ Заказ #${order.id} оформлен!\n\nСумма: ${total}₽\n\nС вами свяжется менеджер для подтверждения.`);
-    }
+    tg.showAlert(`✅ Заказ #${order.id} оформлен!\n\nСумма: ${total}₽\n\nС вами свяжется менеджер для подтверждения.`);
 }
 
 // Показать профиль
@@ -1023,11 +774,11 @@ function showProfile() {
                     </div>
                 </div>
                 
-                <button onclick="openChannel()" style="width: 100%; padding: 12px; margin-bottom: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
+                <button onclick="openChannel()" style="width: 100%; padding: 12px; margin-bottom: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
                     <i class="fab fa-telegram"></i> Наш канал @teatea_bar
                 </button>
                 
-                <button onclick="showSupport()" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
+                <button onclick="showSupport()" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
                     <i class="fas fa-headset"></i> Поддержка
                 </button>
             </div>
@@ -1038,19 +789,15 @@ function showProfile() {
 
 // Открыть канал
 function openChannel() {
-    if (tg.openLink) {
-        tg.openLink('https://t.me/teatea_bar');
-    }
+    tg.openLink('https://t.me/teatea_bar');
 }
 
 // Поддержка
 function showSupport() {
-    if (tg.showAlert) {
-        tg.showAlert('📞 Служба поддержки:\n\n' +
-                    'Telegram: @teatea_bar\n' +
-                    'Email: support@teatea.ru\n' +
-                    'Часы работы: 10:00-20:00');
-    }
+    tg.showAlert('📞 Служба поддержки:\n\n' +
+                 'Telegram: @teatea_bar\n' +
+                 'Email: support@teatea.ru\n' +
+                 'Часы работы: 10:00-20:00');
 }
 
 // Закрыть модальное окно
@@ -1058,6 +805,11 @@ function closeModal() {
     document.querySelectorAll('.modal').forEach(modal => {
         modal.style.display = 'none';
     });
+}
+
+// Показать товар
+function showProduct(productId) {
+    tg.showAlert('Детальная информация о товаре скоро будет доступна!');
 }
 
 // Инициализация при загрузке страницы
