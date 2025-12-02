@@ -963,3 +963,6 @@ function closeModal() {
     });
 }
 
+function showOrders() {
+    alert("Страница заказов пока не реализована");
+}
