@@ -536,3 +536,66 @@ body {
     color: #2E7D32;
     text-decoration: underline;
 }
+/* Стили для значка Telegram */
+.tg-badge {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: #0088cc;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+}
+
+.user-avatar {
+    position: relative;
+}
+
+/* Индикатор синхронизации */
+.sync-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #4CAF50;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    z-index: 1000;
+    display: none;
+    animation: pulse 2s infinite;
+}
+
+.sync-indicator.show {
+    display: block;
+}
+
+/* Анимация для индикатора синхронизации */
+@keyframes syncPulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+/* Стили для отображения статуса пользователя */
+.user-status {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.user-status.tg {
+    color: #0088cc;
+    font-weight: bold;
+}
+
+.user-status.guest {
+    color: #999;
+}
