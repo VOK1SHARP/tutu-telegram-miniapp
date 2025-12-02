@@ -921,3 +921,45 @@ function debugUser() {
     console.log('Popularity:', popularity);
     console.log('Telegram WebApp:', tg);
 }
+function showFullCatalog() {
+    const modal = document.getElementById('catalog-modal');
+
+    modal.classList.add('bottom-sheet');
+    modal.innerHTML = `
+        <div class="modal-content" style="max-height:85vh; overflow-y:auto;">
+            <div class="modal-header">
+                <h3><i class="fas fa-list"></i> Весь каталог</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+
+            <div class="modal-body">
+                ${teaCatalog.map(t => `
+                    <div class="product-card catalog-card" onclick="showProduct(${t.id})">
+                        <div class="product-image ${getTeaTypeClass(t.type)}">
+                            ${t.tag ? `<div class="product-tag">${t.tag}</div>` : ''}
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-name">${t.name}</h3>
+                            <div class="product-subtitle">${t.subtitle}</div>
+                            <div class="product-type">${t.type}</div>
+                            <div class="product-price">${t.price}₽</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+}
+function closeModal() {
+    document.querySelectorAll('.modal').forEach(m => {
+        m.style.display = 'none';
+        m.classList.remove('bottom-sheet');
+    });
+}
+
