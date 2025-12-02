@@ -284,6 +284,9 @@ function loadPopularProducts(){
 
 /* ========== CATALOG ========== */
 function showFullCatalog(){
+    // Закрываем все модалки, чтобы каталог не накладывался поверх карточки товара
+    closeModal();
+
     const modal = document.getElementById('catalog-modal');
     modal.classList.add('bottom-sheet');
     modal.innerHTML = `
@@ -403,18 +406,25 @@ function showCartModal(){
     modal.onclick = (e)=>{ if (e.target === modal) closeModal(); };
 }
 
-function updateQuantity(productId, delta){
+async function updateQuantity(productId, delta){
     const item = cart.find(i=>i.id === productId);
     if (!item) return;
-    item.quantity += delta;
-    if (item.quantity <= 0) {
+    const newQty = (item.quantity || 0) + delta;
+
+    if (newQty <= 0) {
+        // подтверждение удаления
+        const ok = await confirmAction(`Удалить "${item.name}" из корзины?`);
+        if (!ok) return;
         cart = cart.filter(i=>i.id !== productId);
+    } else {
+        item.quantity = newQty;
     }
-    saveCart();
+
+    await saveCart();
     try{ tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light'); } catch(e){}
+    // Если корзина пустая — закроем модал, иначе обновим его
     if (cart.length === 0) closeModal(); else showCartModal();
 }
-
 /* ========== CART LOGIC ========== */
 function addToCart(productId){
     const product = teaCatalog.find(p=>p.id === productId);
@@ -450,11 +460,16 @@ function updateCart(){
 /* ========== CHECKOUT: copy text & open manager chat ========== */
 async function checkout(){
     if (!cart || cart.length === 0) { try{ tg && tg.showAlert && tg.showAlert('Добавьте товары в корзину'); }catch(e){}; return; }
+
+    // Подтверждение
+    const confirmCheckout = await confirmAction('Подтвердить оформление заказа?');
+    if (!confirmCheckout) return;
+
     const total = cart.reduce((s,i)=>s + i.price * i.quantity, 0);
     const order = { id: Date.now(), user_id:userId, user_name: userData.first_name || 'Гость', cart:[...cart], total, timestamp: new Date().toISOString() };
     await saveOrder(order);
 
-    // build message
+    // Формируем текст заказа
     const lines = [];
     lines.push(`Новый заказ #${order.id}`);
     lines.push(`Покупатель: ${order.user_name} ${userData.username ? `(${userData.username})` : ''}`);
@@ -467,7 +482,7 @@ async function checkout(){
     lines.push('Адрес: ');
     const orderText = lines.join('\n');
 
-    // try copy to clipboard
+    // Копируем в буфер (если возможно) и открываем чат менеджера
     let copied = false;
     try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -485,7 +500,7 @@ async function checkout(){
         showOrderCopyModal(orderText);
     }
 
-    // clear cart locally
+    // Очищаем корзину
     cart = [];
     await saveCart();
     closeModal();
@@ -714,3 +729,38 @@ window.addEventListener('beforeunload', ()=>{ try{ saveCart(); }catch(e){} });
 function debugUser(){
     console.log({ userData, userId, isTelegramUser, cart, popularity, tg });
 }
+async function confirmAction(message){
+    // Пока используем встроенный confirm (telegram showPopup/showConfirm может быть несовместим)
+    try {
+        return Promise.resolve(window.confirm(message));
+    } catch(e){
+        return Promise.resolve(false);
+    }
+}
+
+async function clearCart(){
+    if (!cart || cart.length === 0) {
+        try{ tg && tg.showAlert && tg.showAlert('Корзина уже пуста'); } catch(e){ alert('Корзина уже пуста'); }
+        return;
+    }
+    const ok = await confirmAction('Очистить всю корзину? Вы не сможете вернуть удалённые товары.');
+    if (!ok) return;
+    cart = [];
+    await saveCart();
+    updateCart();
+    try{ tg && tg.showAlert && tg.showAlert('Корзина очищена'); } catch(e){ alert('Корзина очищена'); }
+}
+// ---------- ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ (чтобы onclick в HTML находил их) ----------
+window.showFullCatalog = showFullCatalog;
+window.showProduct = showProduct;
+window.showCartModal = showCartModal;
+window.showOrders = showOrders;
+window.showProfile = showProfile;
+window.addToCart = addToCart;
+window.checkout = checkout;
+window.updateQuantity = updateQuantity;
+window.clearCart = clearCart;
+window.reorder = reorder;
+window.showOrderDetails = showOrderDetails;
+window.copyOrderDetails = copyOrderDetails;
+window.copyOrderText = copyOrderText;
